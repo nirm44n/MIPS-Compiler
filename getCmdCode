@@ -1,0 +1,30 @@
+#gets memory location of first character in a0
+#return code of instruction in v0
+#code is the sum of all the characters' ascii codes
+#return location of last checked character in v1
+
+#if reached a non-lowercase character before a whitespace returns error code of 0
+
+#store a0 in s0
+#put 0 into s1
+
+#while label
+#load byte using s0 into a0
+#check if it is undercase
+#if not go to exit
+#add a0 to s1
+#increment s0
+#go to while label
+
+
+#exit label
+#check to see if a0 is whitespace
+#if white space go to exit2
+#put 0 in v0
+#put s0 in v1
+#jump back
+
+#exit2 label
+#put s1 in v0
+#put s0 in v1
+#jump back

@@ -1,0 +1,53 @@
+#aklsdf;asd
+.data
+	writeMe:	.space 4	#creates a 4 byte space to store the register contents that need to be written
+		
+.text
+
+
+#both recieve the file descriptor in a0
+#and need the register to be written in a1
+writeText:
+	#write one byte of the write me into the file each time (this corresponds to the character)
+	la $a1, writeMe
+	li $a2, 1
+	#move the register to be written into the s0 register
+	add $s0, $a1, $zero
+	#put 1 in the rightmost position in the t0 register
+	li $t0, 1
+	sll $t0, $t0, 31
+writeText_loop:
+	beq $t0, $zero, writeText_end	#if the 1 fell off the right side of register end the procedure
+	#and the register being read with the location of the 1 into t1
+	and $t1, $t0, $s0	#this will tell us if the value had a 0 or 1 in that position
+	srl $t0, $t0, 1	#shift the position of the tracer 1 to the right
+	beq $t1, $zero, writeText_0
+	j writeText_1
+	
+writeText_1:
+	#store the character '1' into the writeMe and print to file
+	li $t1, 49
+	sb $t1, writeMe($zero)
+	syscall
+	j writeText_loop
+writeText_0:
+	#store the character '0' into the writeMe and print to file
+	li $t1, 48
+	sb $t1, writeMe($zero
+	syscall
+	j writeText_loop
+writeText_end:
+	#write a carriage return to the file and jump back
+	li $t0, 13
+	sb $t0, writeMe($zero)
+	syscall	
+	jr $ra
+	
+#both recieve the file descriptor in a0
+#and need the register to be written in a1	
+writeBin:
+	sw $a1, writeMe($zero)	#store the value of the register into the writeMe 4 byte space
+	la $a1, writeMe		#store the address of writeMe into a1 for output
+	li $a2, 4		#write 4 bytes into the file
+	syscall
+	jr $ra

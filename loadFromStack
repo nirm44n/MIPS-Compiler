@@ -1,0 +1,12 @@
+#loads saved temporaries from the stack, hopefully $ra was among them if needed
+loadFromStack:
+	lw $s0, 0($sp)
+	lw $s1, 4($sp)
+	lw $s2, 8($sp)
+	lw $s3, 12($sp)
+	lw $s4, 16($sp)
+	lw $s5, 20($sp)
+	lw $s6, 24($sp)
+	lw $s7, 28($sp)
+	add $sp, $sp, 32
+	jr $ra

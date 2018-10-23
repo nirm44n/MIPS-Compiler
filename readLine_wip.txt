@@ -1,0 +1,22 @@
+#lets say $s0 is where the file pointer is
+add $t0, $s0, $zero	#now t0 points to the first char (like $s0)
+add $t1, $zero, $zero	#t1 will be the location in the char array we are writing to
+addi $t4, $zero, 13		#value of the carriage return character in $t4
+addi $t5, $zero, 257	#max value of $t1
+addi $t6, $zero, 35		#value of '#'
+
+#let's say the rL label contains a 258 character storage space
+readLine_loop:
+lbu $t2, 0($t0)	#load the character into t2
+beq $t2, $t4, readLine_exit	#exit if encountering a carriage return
+beq $t2, $t6, readLine_exit	#or if encountering a '#' comment signifier
+beq $t1, $t5, readLine_exit	#or limit of rL is reached
+
+sbu $t2, 0($t1)		#store the character in the rL string
+addi $t1, $t1, 1	#increment string array tracer
+addi $t0, $t0, 1	#increment file reader tracer
+j readLine_loop
+
+readLine_exit:
+addi $t2, $zero, 0	#put null character in rL string
+sbu $t2, 0($t1)		#end the string with null character

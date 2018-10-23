@@ -1,0 +1,31 @@
+add	297
+addi	402
+addiu	519
+addu	414
+and	307
+andi	412
+beq	312
+bne	309
+j	106
+jal	311
+jr	220
+lbu	323
+lhu	329
+ll	216
+lui	330	has duplicate
+lw	227
+nor	335
+or	225
+ori	330	has duplicate
+slt	339
+slti	444
+sltiu	561
+sltu	456
+sll	331
+srl	337
+sb	213
+sc	214
+sh	219
+sw	234
+sub	330	has duplicate
+subu	447

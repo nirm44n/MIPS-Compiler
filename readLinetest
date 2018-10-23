@@ -1,0 +1,82 @@
+.data 
+	rL:	.space	258
+	rL_labelLine:	.space 258
+	Filename: .asciiz "mipsio.txt"
+	singleChar: .ascii "_"
+	.
+.text
+#open a file
+OPEN_INPUT:
+	li $v0, 13
+	li $a1, 0
+	la $a0, Filename
+	add $a2, $zero, $zero
+	syscall
+	add $s6, $v0, $zero
+#read data from file	
+
+add $s0, $v0, $zero
+add $t8, $zero, $zero
+	#lets say $s0 is where the file pointer is
+add $t0, $s0, $zero	#now t0 points to the first char (like $s0)
+add $t1, $zero, $zero	#t1 will be the location in the char array we are writing to
+addi $t4, $zero, 13		#value of the carriage return character in $t4
+addi $t5, $zero, 257	#max value of $t1
+addi $t6, $zero, 35		#value of '#'
+
+#let's say the rL label contains a 258 character storage space
+readLine_loop:
+#lbu $t2, 0($t0)	#load the character into t2
+jal READ
+lbu $t2, singleChar($zero)
+beq $t2, $t4, readLine_exit	#exit if encountering a carriage return
+beq $t2, $t6, readLine_exit	#or if encountering a '#' comment signifier
+beq $t1, $t5, readLine_exit	#or limit of rL is reached
+
+sb $t2, rL($t1)		#store the character in the rL string
+addi $t1, $t1, 1	#increment string array tracer
+addi $t0, $t0, 1	#increment file reader tracer
+j readLine_loop
+
+readLine_exit:
+addi $t2, $zero, 0	#put null character in rL string
+sb $t2, rL($t1)		#end the string with null character
+addi $t8, $t8, 1
+
+
+la $a0, rL
+li $v0, 4
+syscall
+
+#jal READBACKWARDS
+#jal READBACKWARDS
+j readLine_loop
+beq $t8, 4, exit
+
+li $v0, 11
+la $a0, singleChar
+syscall
+
+
+exit:
+li $v0, 10	#exit program
+syscall
+
+
+
+READ:
+	#addi $t3, $t3, 1		# number of bytes read
+	move $a0, $s6
+	li $v0, 14
+	la $a1, singleChar		#all characters get loaded to the s6 buffer think large memory bank
+	li $a2, 1		#number of bytes read
+	syscall
+	jr $ra
+	
+READBACKWARDS:
+	move $a0, $s6
+	li $v0, 14
+	la $a1, singleChar		#all characters get loaded to the s6 buffer think large memory bank
+	li $a2, -1		#number of bytes read
+	syscall
+	jr $ra

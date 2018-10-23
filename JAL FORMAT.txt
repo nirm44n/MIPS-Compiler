@@ -1,0 +1,7 @@
+	addi $sp, $sp, -4
+	sw $ra, 0($sp)
+	jal saveToStack
+	jal changeNine		#change this to your jal procedure
+	jal loadFromStack
+	lw $ra, 0($sp)
+	addi $sp, $sp, 4

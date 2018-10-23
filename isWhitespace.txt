@@ -1,0 +1,18 @@
+#accept the character in a0
+#return 1 if whitespace, return 0 otherwise (in v0)
+#null and comma(',') considered a whitespace for the purpose of this function
+isWhitespace:
+beq $a0, 13, isWhitespace_isSpace	#carriage return
+beq $a0,  9, isWhitespace_isSpace	#tab
+beq $a0, 12, isWhitespace_isSpace	#form feed
+beq $a0, 32, isWhitespace_isSpace	#space
+beq $a0, 44, isWhitespace_isSpace	#comma ,
+beq $a0,  0, isWhitespace_isSpace	#null \0
+j isWhitespace_notSpace
+
+isWhitespace_isSpace:
+addi $v0, $zero, 1
+jr $ra
+isWhitespace_notSpace:
+add $v0, $zero, $zero
+jr $ra

@@ -1,0 +1,14 @@
+li $t0, 0x9
+li $t1, 0x20
+li $t3, 0
+Loop_NoTabSpace:
+add $t4, $t3, $s0
+lb $t2, ($t4)
+beq $t2, $t1, Label_NoTabSpace
+beq $t2, $t0, Label_NoTabSpace
+j Label_NoTabSpace_Exit
+Label_NoTabSpace:
+addi $t3, $t3, 1
+j Loop_NoTabSpace
+Label_NoTabSpace_Exit:
+

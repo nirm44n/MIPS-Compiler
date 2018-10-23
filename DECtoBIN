@@ -1,0 +1,91 @@
+.data
+	prompt: .asciiz "Please enter a decimal number to have its binary equivilant calculated:    "
+	output: .asciiz "The binary coversion of your number is:   "
+	newline: .asciiz "\n"
+	space: .asciiz "     "
+.text
+	la $a0, prompt
+	li $v0, 4
+	syscall
+	
+	li $v0, 5
+	syscall 
+	move $s1, $v0
+	addi $s2, $s1, 0		#s2 is the copy of s1 used for counting spaces
+	
+	li $s7, 0			#bit counter
+	li $s6 16			#max bits
+	li $s4, 0			#SUM of all the bin values
+	li $t7, 0 			#SUM counter
+	li $t5, 0 			#pow 10
+	li $t4, 1			#base pow 10
+	la $a0, newline
+	li $v0, 4 
+	syscall
+bitsize:
+	addi $s7, $s7, 1
+	div $s2, $s2, 2
+	bne $s2, 0 , bitsize
+	move $a0, $s7
+	li $v0, 1
+	syscall
+	la $a0, newline
+	li $v0, 4 
+	syscall
+	
+	sub $t3, $s6, $s7		# number of infront bytes
+toBinary:
+	
+	rem $t1, $s1, 2	
+	div $s1, $s1, 2
+	mflo $t0
+	move $s1, $t0
+	jal reverse
+	move $a0, $t1
+	li $v0, 1
+	syscall
+	bne $s1, 0 , toBinary
+	la $a0, newline
+	li $v0, 4 
+	syscall	
+	j end
+bitFill:
+	add $t3, $t3, -1
+	move $a0, $zero
+	li $v0, 1
+	syscall
+	bne $t3, 0, bitFill
+	jr $ra
+	
+reverse:
+	li $t4 1
+	addi $t7, $t7, 1
+	addi $t6, $t7, 0
+	
+	move $t2, $ra
+	
+	jal powAmount
+	addi $t7, $t6, 0
+	mul $t5, $t1, $t4
+	add $s5, $s5, $t5
+	
+	move $ra, $t2
+	jr $ra
+powAmount:
+	mul $t4, $t4, 10
+	addi $t7, $t7, -1
+	bne $t7, 0, powAmount
+	div $t4, $t4, 10
+	jr $ra
+end:
+	la $a0, newline
+	li $v0, 4 
+	syscall	
+	
+	jal bitFill
+	move $a0, $s5
+	li $v0, 1
+	syscall
+	li $v0, 10 
+	syscall
+

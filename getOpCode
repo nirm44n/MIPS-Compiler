@@ -1,0 +1,26 @@
+#recieves cmd code in a0, pointer to first blank char after command in a1
+#returns opcode and func code (if necessary) in the correct bit placements
+#returns format code in v1
+# 0 = R		1 = I		2 = J		3 = parentheses instruction	...?
+
+#use series of beq to compare a0 to various codes for the instructions
+#will need to load instruction codes into registers for comparison
+
+#example:
+	#addi $t0, $zer0, 297	#(code for add)
+	#beq $a0, $t0, getOpCode_add
+	
+	
+	#getOpCode_add:
+	#addi $v0, $zero, 0
+	#sll $v0, $v0, 26	#always do this to get the opcode in the correct position
+	#ori $v0, $v0, 0x20	#used ori with 0x20 to get the func code in with the opcode
+	#addi $v1, $zero, 0	$since add has R format
+	#j getOpCode_exit
+	
+	#getOpCode_exit:
+	#jr $ra
+
+
+#if code == 330
+#check character with offset of -3 from a1, this would correspond to the s, l, or o in sub, lui, and ori

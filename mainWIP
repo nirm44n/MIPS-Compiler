@@ -1,0 +1,1555 @@
+.data
+	Filename:	.asciiz	"assembleMePlease.txt"
+	Filename2:	.asciiz	"assembleMePlease_copy.txt"
+	
+	binDataOut:	.asciiz	"dataBin.bin"
+	txtDataOut:	.asciiz	"dataText.txt"
+	
+	binTextOut:	.asciiz	"textBin.bin"
+	txtTextOut:	.asciiz	"textText.txt"
+	
+	instrxn:	.space	258
+	instrxn2:	.space	258
+	label:		.space	258
+	rL:		.space	258
+	rL2:		.space	258
+	writeMe:	.word	0	#this will be used to output to files
+	singleChar:	.space	1
+	#store the part of the readLine directive to be stored into this string (don't need copies)
+	stored:		.space	258
+	writeMeSize:	.word	0	#byte offset of next byte to write into
+
+.text
+#	addi $sp, $sp, -4
+#	sw $ra, 0($sp)
+#	jal saveToStack
+#	jal changeNine		#use this for jals to save everything
+#	jal loadFromStack
+#	lw $ra, 0($sp)
+#	addi $sp, $sp, 4
+
+
+main:
+	#open file
+	li $v0, 13
+	li $a1, 0	#0 for read	1 for write & create
+	la $a0, Filename
+	add $a2, $zero, $zero
+	syscall
+	add $s0, $v0, $zero	#s0 contains file descriptor of main file we're compiling
+	
+main_findDirective:
+	la $a0, rL	#load address of output string for readLine
+	add $a1, $s0, $zero	#load the file descriptor into a1 for readLine
+	jal saveToStack
+	jal readLine
+	jal loadFromStack
+	add $s1, $v0, $zero	#v0 will be -1 from readLine if eof reached
+	jal saveToStack		#so much function overhead :(
+	la $a0, rL	#load address of input string for det directive
+	jal detDirective
+
+	jal loadFromStack
+	beq $v0, 0, main_text	#text directive found
+	beq $v0, 1, main_data	#data directive found
+	beq $s1, -1, main_FINISHED
+	j main_findDirective
+
+
+
+#DATA	DATA	DATA	DATA	DATA	DATA	DATA	DATA	DATA	DATA	DATA	DATA
+#DATA	DATA	DATA	DATA	DATA	DATA	DATA	DATA	DATA	DATA	DATA	DATA
+main_data:
+	#open file
+	li $v0, 13
+	li $a1, 1	#0 for read	1 for write & create
+	la $a0, binDataOut
+	add $a2, $zero, $zero
+	syscall
+	add $s1, $v0, $zero	#s1 contains file descriptor of bin file we're writing to
+	
+	#open file
+	li $v0, 13
+	li $a1, 1	#0 for read	1 for write & create
+	la $a0, txtDataOut
+	add $a2, $zero, $zero
+	syscall
+	add $s2, $v0, $zero	#s2 contains file descriptor of bin file we're writing to
+	
+	add $s3, $zero, $zero	#quantity of words outputted, used to word align words
+	
+main_data_loop:
+	beq $s7, -1, main_FINISHED	#terminate if end of line reached and we're still trying to look for stuff
+	la $a0, rL
+	add $a1, $s0, $zero
+	jal saveToStack
+	jal readLine		#read line from file
+	la $a0, rL
+	jal loadFromStack
+	add $s7, $v0, $zero	#store result of readLine to check for eof
+	jal saveToStack
+	jal detDirective	#look for directives
+	jal loadFromStack
+	beq $v0, -1, main_data_loop	#no directives found on this line
+	beq $v0,  0, main_data_done	#reached the text directive, no more data storage
+	jal saveToStack
+
+	add $a0, $v0, $zero		#put the directive type into a0
+	add $a1, $s3, $zero		#put words outputted up to now in a1
+	add $a2, $s1, $zero		#file descriptor of binary file
+	add $a3, $s2, $zero		#file descriptor of text file
+	jal storeData			#soon to be made
+	jal loadFromStack
+	add $s3, $v0, $zero		#update the running total of words outputted
+	j main_data_loop
+	
+	
+
+main_data_done:
+
+	#close files
+	li $v0, 16
+	add $a0, $s1, $zero	#bin file descriptor
+	syscall
+	add $a0, $s2, $zero	#txt file descriptor
+	syscall
+	#only reached when finding .text while parsing through .data
+	
+#DATA	DATA	DATA	DATA	DATA	DATA	DATA	DATA	DATA	DATA	DATA	DATA
+#DATA	DATA	DATA	DATA	DATA	DATA	DATA	DATA	DATA	DATA	DATA	DATA
+
+
+main_text:
+
+
+	
+	
+	
+	
+	
+	
+	
+	
+main_FINISHED:
+	li $v0, 16
+	add $a0, $s0, $zero
+	syscall
+	add $a0, $s1, $zero	#bin file descriptor
+	syscall
+	add $a0, $s2, $zero	#txt file descriptor
+	syscall
+	li $v0, 10
+	syscall
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#SAVE	LOAD	SAVE	LOAD	SAVE	LOAD	SAVE	LOAD	SAVE	LOAD	SAVE	LOAD	SAVE	LOAD	SAVE	LOAD
+#SAVE	LOAD	SAVE	LOAD	SAVE	LOAD	SAVE	LOAD	SAVE	LOAD	SAVE	LOAD	SAVE	LOAD	SAVE	LOAD
+#SAVE	LOAD	SAVE	LOAD	SAVE	LOAD	SAVE	LOAD	SAVE	LOAD	SAVE	LOAD	SAVE	LOAD	SAVE	LOAD
+loadFromStack:
+	lw $s0, 0($sp)
+	lw $s1, 4($sp)
+	lw $s2, 8($sp)
+	lw $s3, 12($sp)
+	lw $s4, 16($sp)
+	lw $s5, 20($sp)
+	lw $s6, 24($sp)
+	lw $s7, 28($sp)
+	add $sp, $sp, 32
+	jr $ra
+
+saveToStack:
+	add $sp, $sp, -32
+	sw $s0, 0($sp)
+	sw $s1, 4($sp)
+	sw $s2, 8($sp)
+	sw $s3, 12($sp)
+	sw $s4, 16($sp)
+	sw $s5, 20($sp)
+	sw $s6, 24($sp)
+	sw $s7, 28($sp)
+	jr $ra
+#SAVE	LOAD	SAVE	LOAD	SAVE	LOAD	SAVE	LOAD	SAVE	LOAD	SAVE	LOAD	SAVE	LOAD	SAVE	LOAD
+#SAVE	LOAD	SAVE	LOAD	SAVE	LOAD	SAVE	LOAD	SAVE	LOAD	SAVE	LOAD	SAVE	LOAD	SAVE	LOAD
+#SAVE	LOAD	SAVE	LOAD	SAVE	LOAD	SAVE	LOAD	SAVE	LOAD	SAVE	LOAD	SAVE	LOAD	SAVE	LOAD
+
+
+
+#TEXT	 TO	IMMEDIATE	TEXT	 TO	IMMEDIATE	TEXT	 TO	IMMEDIATE	TEXT	 TO	IMMEDIATE
+#TEXT	 TO	IMMEDIATE	TEXT	 TO	IMMEDIATE	TEXT	 TO	IMMEDIATE	TEXT	 TO	IMMEDIATE
+#TEXT	 TO	IMMEDIATE	TEXT	 TO	IMMEDIATE	TEXT	 TO	IMMEDIATE	TEXT	 TO	IMMEDIATE
+#a0:	address in memory of first char of value
+#v0:	value of the string in binary form
+#v1:	-1 if error
+textToBinVal:
+	add $v1, $zero, $zero
+	add $s0, $zero, $ra	#store the return address in s0
+	add $s4, $zero, $zero	#s4 keeps the cumulative sum
+	#use s1 to find the last spot in the text array
+	add $s1, $zero, $a0
+
+#find the last spot in the array
+textToBinVal_findLastLoop:
+	lbu $t0, 0($s1)
+	jal charToVal
+	beq $t0, -1, textToBinVal_detType	#character doesn't have a corresponding value
+	addi $s1, $s1, 1
+	j textToBinVal_findLastLoop
+
+#determine whether hexadecimal or decimal by looking at second char in array
+textToBinVal_detType:
+	lbu $t0, 1($a0)
+	beq $t0, 88, hexToBin_findVal	#if second char in text is 'X'
+	beq $t0, 120, hexToBin_findVal	#or 'x'	then it should be in hexadecimal format
+	
+	
+#find the value of the char array
+decToBin_findVal:
+	addi $t1, $zero, 1	#t1 is the power of ten (the position of current char)
+	addi $t4, $zero, 10	#constant value of 10 for mult reasons
+	sub $s1, $s1, 1		#trim the non-digit off the tracer s1
+decToBin_findVal_Loop:
+	slt $s3, $s1, $a0	#s3 is 1 when s1 is less than the address value of a0
+	beq $s3, 1, decToBin_done
+	lbu $t0, 0($s1)	#get the ascii char of the digit
+	sub $s1, $s1, 1
+	jal charToVal	#get the value corresponding to ascii char (will be in t0)
+	beq $t9, -1, decToBin_error	#if char was a hex value then error (we're assuming decimal)
+	beq $t0, -2, decToBin_minus
+	#multiply the value in t0 by the power of 10
+	multu $t0, $t1
+	mflo $t3
+	#add this to the ongoing sum in s4
+	add $s4, $s4, $t3
+	#multiply the power of ten in t1 by 10
+	multu $t1, $t4
+	mflo $t1	#put the result back in t1
+	j decToBin_findVal_Loop
+
+decToBin_minus:
+	sub $v0, $zero, $s4	#put negative of cumulative sum in return register
+	jr $s0
+decToBin_done:
+	add $v0, $s4, $zero	#put cumulative sum in return register
+	jr $s0
+decToBin_error:
+	addi $v1, $zero, -1
+	jr $s0
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+hexToBin_findVal:
+	addi $t1, $zero, 1	#t1 is the power of 16 (the position of current char)
+	addi $t4, $zero, 0	#shift left each time by value in t4, increment by 4 after each shifting
+	sub $s1, $s1, 1		#trim the non-digit off the tracer s1
+hexToBin_findVal_Loop:
+	lbu $t0, 0($s1)			#get the ascii char of the digit
+	beq $t0, 88, hexToBin_done	#Done when we find 'X'
+	beq $t0, 120, hexToBin_done	#or 'x' at front of string
+	beq $t4, 32, hexToBin_error	#too many characters
+	sub $s1, $s1, 1
+	jal charToVal	#get the value corresponding to ascii char (will be in t0)
+	beq $t0, -1, hexToBin_error	#if not a value character then error
+
+	sllv $t0, $t0, $t4
+	#add this to the ongoing sum in s4
+	or $s4, $s4, $t0
+	addi $t4, $t4, 4
+	j hexToBin_findVal_Loop
+
+hexToBin_done:
+	add $v0, $zero, $s4	#put the cumulative "sum" into v0
+	jr $s0
+	
+hexToBin_error:
+	addi $v1, $zero, -1
+	jr $s0
+
+
+
+#RECIEVES INPUT THROUGH T0, OUTPUTS THROUGH T0
+#find value of ascii digit, -1 if not a number digit,-2 if a '-'
+#t9 = -1 iff	t0 is a hex only character
+charToVal:
+	add $t9, $zero, $zero
+	beq $t0, 48, charToVal_ZERO
+	beq $t0, 49, charToVal_ONE
+	beq $t0, 50, charToVal_TWO
+	beq $t0, 51, charToVal_THREE
+	beq $t0, 52, charToVal_FOUR
+	beq $t0, 53, charToVal_FIVE
+	beq $t0, 54, charToVal_SIX
+	beq $t0, 55, charToVal_SEVEN
+	beq $t0, 56, charToVal_EIGHT
+	beq $t0, 57, charToVal_NINE
+	beq $t0, 65, charToVal_A
+	beq $t0, 97, charToVal_A
+	beq $t0, 66, charToVal_B
+	beq $t0, 98, charToVal_B
+	beq $t0, 67, charToVal_C
+	beq $t0, 99, charToVal_C
+	beq $t0, 68, charToVal_D
+	beq $t0, 100, charToVal_D
+	beq $t0, 69, charToVal_E
+	beq $t0, 101, charToVal_E
+	beq $t0, 70, charToVal_F
+	beq $t0, 102, charToVal_F
+	#seems strange, but made it work
+	beq $t0, 88, charToVal_X
+	beq $t0, 120, charToVal_X
+	beq $t0, 45, charToVal_MINUS
+	#uninteresting character
+	subi $t0, $zero, 1
+	jr $ra
+charToVal_MINUS:
+	sub $t0, $zero, 2
+	jr $ra
+charToVal_ZERO:
+	addi $t0, $zero, 0
+	jr $ra
+charToVal_ONE:
+	addi $t0, $zero, 1
+	jr $ra
+charToVal_TWO:
+	addi $t0, $zero, 2
+	jr $ra
+charToVal_THREE:
+	addi $t0, $zero, 3
+	jr $ra
+charToVal_FOUR:
+	addi $t0, $zero, 4
+	jr $ra
+charToVal_FIVE:
+	addi $t0, $zero, 5
+	jr $ra
+charToVal_SIX:
+	addi $t0, $zero, 6
+	jr $ra
+charToVal_SEVEN:
+	addi $t0, $zero, 7
+	jr $ra
+charToVal_EIGHT:
+	addi $t0, $zero, 8
+	jr $ra
+charToVal_NINE:
+	addi $t0, $zero, 9
+	jr $ra
+charToVal_A:
+	addi $t0, $zero, 10
+	addi $t9, $zero, -1
+	jr $ra
+charToVal_B:
+	addi $t0, $zero, 11
+	addi $t9, $zero, -1
+	jr $ra
+charToVal_C:
+	addi $t0, $zero, 12
+	addi $t9, $zero, -1
+	jr $ra
+charToVal_D:
+	addi $t0, $zero, 13
+	addi $t9, $zero, -1
+	jr $ra
+charToVal_E:
+	addi $t0, $zero, 14
+	addi $t9, $zero, -1
+	jr $ra
+charToVal_F:
+	addi $t0, $zero, 15
+	addi $t9, $zero, -1
+	jr $ra	
+charToVal_X:
+	addi $t0, $zero, 0
+	addi $t9, $zero, -1
+	jr $ra	
+
+#TEXT	 TO	IMMEDIATE	TEXT	 TO	IMMEDIATE	TEXT	 TO	IMMEDIATE	TEXT	 TO	IMMEDIATE
+#TEXT	 TO	IMMEDIATE	TEXT	 TO	IMMEDIATE	TEXT	 TO	IMMEDIATE	TEXT	 TO	IMMEDIATE
+#TEXT	 TO	IMMEDIATE	TEXT	 TO	IMMEDIATE	TEXT	 TO	IMMEDIATE	TEXT	 TO	IMMEDIATE
+
+
+
+#DO   LABELS   MATCH  ?		DO   LABELS   MATCH  ?		DO   LABELS   MATCH  ?		DO   LABELS   MATCH  ?
+#DO   LABELS   MATCH  ?		DO   LABELS   MATCH  ?		DO   LABELS   MATCH  ?		DO   LABELS   MATCH  ?
+#DO   LABELS   MATCH  ?		DO   LABELS   MATCH  ?		DO   LABELS   MATCH  ?		DO   LABELS   MATCH  ?
+
+#labelsMatch
+#a0:	location of label only string
+#a1:	index of last char of label in label string
+#a2:	location of last char of label of instruction in memory
+
+#return 1 in v0 if the labels match, return 0 otherwise
+labelsMatch:
+add $s0, $ra, $zero	#save return address
+#t0, t1 point to the last characters of their labels
+add $t0, $a0, $a1	#label string tracer
+add $t1, $a2, $zero	#instruction string tracer
+#check procedure
+labelsMatch_checkByteLoop:
+#load bytes pointed to by t0 and t1 into t2 and t3
+lbu $t2, ($t0)
+lbu $t3, ($t1)
+#if t2 is a whitespace go to final check
+add $a0, $t2, $zero
+jal isWhitespace
+beq $v0, 1, labelsMatch_finalCheck
+#if t2 != t3 go to negative exit
+bne $t2, $t3, labelsMatch_false
+#decrement t0 and t1
+addi $t0, $t0, -1
+addi $t1, $t1, -1
+#check again
+j labelsMatch_checkByteLoop
+
+
+#final check,	only jump here if t2 is space and all chars match up so far
+labelsMatch_finalCheck:
+add $a0, $t3, $zero
+jal isWhitespace
+#go to positive exit if t3 also whitespace
+beq $v0, 1, labelsMatch_true
+
+#negative exit
+labelsMatch_false:
+add $v0, $zero, $zero
+jr $s0
+#exit
+
+#positive exit
+labelsMatch_true:
+addi $v0, $zero, 1
+jr $s0
+#return
+
+#DO   LABELS   MATCH  ?		DO   LABELS   MATCH  ?		DO   LABELS   MATCH  ?		DO   LABELS   MATCH  ?
+#DO   LABELS   MATCH  ?		DO   LABELS   MATCH  ?		DO   LABELS   MATCH  ?		DO   LABELS   MATCH  ?
+#DO   LABELS   MATCH  ?		DO   LABELS   MATCH  ?		DO   LABELS   MATCH  ?		DO   LABELS   MATCH  ?
+
+
+
+
+#IS   WHITE   SPACE   ?		IS   WHITE   SPACE   ?		IS   WHITE   SPACE   ?		IS   WHITE   SPACE   ?
+#IS   WHITE   SPACE   ?		IS   WHITE   SPACE   ?		IS   WHITE   SPACE   ?		IS   WHITE   SPACE   ?
+#IS   WHITE   SPACE   ?		IS   WHITE   SPACE   ?		IS   WHITE   SPACE   ?		IS   WHITE   SPACE   ?
+
+#accept the character in a0
+#return 1 if whitespace, return 0 otherwise (in v0)
+#null and comma(',') considered a whitespace for the purpose of this function
+isWhitespace:
+beq $a0, 13, isWhitespace_isSpace	#carriage return
+beq $a0,  9, isWhitespace_isSpace	#tab
+beq $a0, 12, isWhitespace_isSpace	#form feed
+beq $a0, 32, isWhitespace_isSpace	#space
+beq $a0, 44, isWhitespace_isSpace	#comma ,
+beq $a0,  0, isWhitespace_isSpace	#null \0
+j isWhitespace_notSpace
+
+isWhitespace_isSpace:
+addi $v0, $zero, 1
+jr $ra
+isWhitespace_notSpace:
+add $v0, $zero, $zero
+jr $ra
+
+#IS   WHITE   SPACE   ?		IS   WHITE   SPACE   ?		IS   WHITE   SPACE   ?		IS   WHITE   SPACE   ?
+#IS   WHITE   SPACE   ?		IS   WHITE   SPACE   ?		IS   WHITE   SPACE   ?		IS   WHITE   SPACE   ?
+#IS   WHITE   SPACE   ?		IS   WHITE   SPACE   ?		IS   WHITE   SPACE   ?		IS   WHITE   SPACE   ?
+
+
+#EXTRACT	INSTRUCTION	EXTRACT	INSTRUCTION	EXTRACT	INSTRUCTION	EXTRACT	INSTRUCTION	EXTRACT	INSTRUCTION
+#EXTRACT	INSTRUCTION	EXTRACT	INSTRUCTION	EXTRACT	INSTRUCTION	EXTRACT	INSTRUCTION	EXTRACT	INSTRUCTION
+#EXTRACT	INSTRUCTION	EXTRACT	INSTRUCTION	EXTRACT	INSTRUCTION	EXTRACT	INSTRUCTION	EXTRACT	INSTRUCTION
+
+#recieves string address in a0
+#recieves the output address in a1
+#extracts the instruction from the string
+#stores the instruction in the instruction string
+#in v0 returns -1 if no instruction found
+#otherwise returns the last index written to (before null is hit)
+
+extractInstruction:
+add $s1, $zero, $ra	#store the return address
+#look for ':'
+add $t0, $zero, $zero	#t0 used to trace through readLine
+add $s2, $a0, $zero	#address of string being looked at
+add $s3, $a1, $zero	#address of output string
+extractInstruction_colonLoop:
+add $t2, $s2, $t0
+lbu $t1, ($t2)	#store char in t1
+addi $t0, $t0, 1	#increment t0 by 1
+beq $t1, 58, extractInstruction_colonFound	#: is 58 in ascii
+beq $t1, 0, extractInstruction_colonNotFound
+j extractInstruction_colonLoop
+
+
+#find first nonspace character
+extractInstruction_colonNotFound:
+add $t0, $zero, $zero	#set t0 to 0 again
+extractInstruction_colonFound:
+extractInstruction_findInstrLoop:
+add $t2, $s2, $t0
+lbu $a0, ($t2)	#t0 starts at char right after : if : found, at 0 otherwise
+jal isWhitespace
+beq $v0, 0, extractInstruction_foundInstr	#found first char of instruction
+beq $a0, 0, extractInstruction_noInstrFound	#found null before an instruction
+						#case1: "label:"	case2: ""	case1/2 could be followed by any amount of whitespace
+addi $t0, $t0, 1	#increment t0 (index)
+j extractInstruction_findInstrLoop
+
+
+#left align
+extractInstruction_foundInstr:	#t0 has the location of the first character of the instr
+add $s0, $zero, $zero	#use s0 to trace forwards through instruction, will return last position written to
+extractInstruction_foundInstr_loop:
+add $t2, $s2, $t0
+lbu $t1, ($t2)	#store characters in t1
+addi $t0, $t0, 1	#increment t0
+add $t3, $s3, $s0
+sb $t1, ($t3)	#put the character in the s0 index
+beq $t1, 0, extractInstruction_foundInstr_trim	#s0 will point to the null character
+addi $s0, $s0, 1	#increment s0
+j extractInstruction_foundInstr_loop
+
+
+#find null character
+#going backwards if character is a space change to null
+extractInstruction_foundInstr_trim:
+
+extractInstruction_foundInstr_trim_loop:
+#decrement s0 so that it points to a non-null char
+addi $s0, $s0, -1	#s0 minimum of 0 here (otherwise noInstr found label would have been taken)
+add $t3, $s3, $s0
+lbu $a0, ($t3)	#get a character from the readLine string
+jal isWhitespace
+beq $v0, 0, extractInstruction_foundInstr_trim_done
+sb $zero, ($t3)	#store a null where a whitespace used to be
+j extractInstruction_foundInstr_trim_loop
+
+#put s0 in v0 (last character location of the instruction)
+extractInstruction_foundInstr_trim_done:
+add $v0, $s0, $zero
+jr $s1
+
+#put -1 in v0
+extractInstruction_noInstrFound:
+addi $v0, $zero, -1
+jr $s1
+#done with the instruction extraction procedure
+
+#EXTRACT	INSTRUCTION	EXTRACT	INSTRUCTION	EXTRACT	INSTRUCTION	EXTRACT	INSTRUCTION	EXTRACT	INSTRUCTION
+#EXTRACT	INSTRUCTION	EXTRACT	INSTRUCTION	EXTRACT	INSTRUCTION	EXTRACT	INSTRUCTION	EXTRACT	INSTRUCTION
+#EXTRACT	INSTRUCTION	EXTRACT	INSTRUCTION	EXTRACT	INSTRUCTION	EXTRACT	INSTRUCTION	EXTRACT	INSTRUCTION
+
+
+
+#EXTRACT	LABEL	EXTRACT	LABEL	EXTRACT	LABEL	EXTRACT	LABEL	EXTRACT	LABEL	EXTRACT	LABEL	EXTRACT	LABEL
+#EXTRACT	LABEL	EXTRACT	LABEL	EXTRACT	LABEL	EXTRACT	LABEL	EXTRACT	LABEL	EXTRACT	LABEL	EXTRACT	LABEL
+#EXTRACT	LABEL	EXTRACT	LABEL	EXTRACT	LABEL	EXTRACT	LABEL	EXTRACT	LABEL	EXTRACT	LABEL	EXTRACT	LABEL
+
+#a0:	address of input string
+#a1:	address of output string
+#extract the label, right aligned (may be spaces on the left)
+#if no label return -1 in v0
+#otherwise return offset of last char in label
+#DO NOT MAKE LOTS OF SPACES BEFORE LABELS WITHOUT A REAL LABEL; "		:"	THAT'S MEAN
+extractLabel:
+#store the return address
+add $s0, $ra, $zero
+add $t0, $zero, $zero	#trace through array
+add $s2, $a0, $zero	#address of string that we search for a label in
+add $s3, $a1, $zero	#address of output string
+extractLabel_findColonLoop:
+add $t2, $s2, $t0
+lbu $t1, ($t2)	#load the character in t0 position
+beq $t1, 58, extractLabel_colonFound
+beq $t1, 0,  extractLabel_nullLabel	#null reached before ':'
+addi $t0, $t0, 1	#increment the tracer
+j extractLabel_findColonLoop
+
+
+#puts it into the label string
+extractLabel_colonFound:
+#label is a null label if ':' is in position 0
+beq $t0, $zero, extractLabel_nullLabel
+#put null in location corresponding to ':'+1 in label string, this will allow us to guarantee
+addi $t1, $t0, 1
+add $t1, $t1, $s3
+sb $zero, ($t1)
+#a white space on the left side of the label, this will be useful later
+addi $t9, $zero, 32	#32 is ascii for ' '
+sb $t9, ($s3)
+#store the value of $t0 in $s1 and $v0, this is the location of the rightmost character of the label in the label string
+add $v0, $t0, $zero
+add $s1, $t0, $zero
+extractLabel_copyLoop:
+#decrement t0, to get the location of the last character of the label in the readLine string
+add $t0, $t0, -1
+beq $t0, -1, extractLabel_copied	#can't copy something that's out of bounds
+add $t2, $s2, $t0	#the character in t0 pos in string we're looking through
+lbu $t1, ($t2)
+add $t2, $s3, $s1
+sb $t1, ($t2)
+addi $s1, $s1, -1	#copy from right to left
+j extractLabel_copyLoop
+
+#returns location (offset) of the last character in v0
+extractLabel_copied:
+jr $s0
+
+extractLabel_nullLabel:
+addi $v0, $zero, -1
+jr $s0
+
+#EXTRACT	LABEL	EXTRACT	LABEL	EXTRACT	LABEL	EXTRACT	LABEL	EXTRACT	LABEL	EXTRACT	LABEL	EXTRACT	LABEL
+#EXTRACT	LABEL	EXTRACT	LABEL	EXTRACT	LABEL	EXTRACT	LABEL	EXTRACT	LABEL	EXTRACT	LABEL	EXTRACT	LABEL
+#EXTRACT	LABEL	EXTRACT	LABEL	EXTRACT	LABEL	EXTRACT	LABEL	EXTRACT	LABEL	EXTRACT	LABEL	EXTRACT	LABEL
+
+
+
+#GET  COMMAND  CODE	GET  COMMAND  CODE	GET  COMMAND  CODE	GET  COMMAND  CODE	GET  COMMAND  CODE
+#GET  COMMAND  CODE	GET  COMMAND  CODE	GET  COMMAND  CODE	GET  COMMAND  CODE	GET  COMMAND  CODE
+#GET  COMMAND  CODE	GET  COMMAND  CODE	GET  COMMAND  CODE	GET  COMMAND  CODE	GET  COMMAND  CODE
+
+#a0:	location of instruction string
+#v0:	code command
+getCmdCode:
+add $s0, $ra, $zero	#store return address
+add $s1, $a0, $zero	#location we're retrieving from
+add $s2, $zero, $zero	#cumulative sum
+
+getCmdCode_loop:
+lbu $a0, ($s1)
+jal normLetter
+beq $v0, -1, getCmdCode_exit
+add $s2, $s2, $v0	#add to cumulative sum the value of the normalized letter
+addi $s1, $s1, 1	#increment the tracer
+j getCmdCode_loop	#reiterate
+
+getCmdCode_exit:
+add $v0, $s2, $zero
+jr $s0
+
+#GET  COMMAND  CODE	GET  COMMAND  CODE	GET  COMMAND  CODE	GET  COMMAND  CODE	GET  COMMAND  CODE
+#GET  COMMAND  CODE	GET  COMMAND  CODE	GET  COMMAND  CODE	GET  COMMAND  CODE	GET  COMMAND  CODE
+#GET  COMMAND  CODE	GET  COMMAND  CODE	GET  COMMAND  CODE	GET  COMMAND  CODE	GET  COMMAND  CODE
+
+
+
+#NORMALIZE   CHARACTER		NORMALIZE   CHARACTER		NORMALIZE   CHARACTER		NORMALIZE   CHARACTER
+#NORMALIZE   CHARACTER		NORMALIZE   CHARACTER		NORMALIZE   CHARACTER		NORMALIZE   CHARACTER
+#NORMALIZE   CHARACTER		NORMALIZE   CHARACTER		NORMALIZE   CHARACTER		NORMALIZE   CHARACTER
+
+#a0:	character to check
+#v0:	lowercase char code if letter,	-1 otherwise
+normLetter:
+li $t1, 91		#char code of Z is 90
+slt $t0, $a0, $t1	#1 if a0 is below upper bound of uppercase letters
+sgt $t1, $a0, 64	#1 if a0 is above lower bound of uppercase letters
+beq $t0, $t1, normLetter_normalize	#both are equal iff a0 is an uppercase letter
+
+li $t1, 123		#char code of z is 122
+slt $t0, $a0, $t1	#1 if a0 is below upper bound of lowercase letters
+sgt $t1, $a0, 96	#1 if a0 is above lower bound of lowercase letters
+beq $t0, $t1, normLetter_lower	#both are equal iff a0 is a lowercase letter
+addi $v0, $zero, -1	#wasn't a letter
+j normLetter_exit
+
+normLetter_lower:
+add $v0, $zero, $a0
+j normLetter_exit	#performance inefficient but clearer for debugging
+normLetter_normalize:
+addi $v0, $a0, 32	#all lower case char codes are 32 greater than their uppercase counterparts
+normLetter_exit:
+jr $ra
+
+#NORMALIZE   CHARACTER		NORMALIZE   CHARACTER		NORMALIZE   CHARACTER		NORMALIZE   CHARACTER
+#NORMALIZE   CHARACTER		NORMALIZE   CHARACTER		NORMALIZE   CHARACTER		NORMALIZE   CHARACTER
+#NORMALIZE   CHARACTER		NORMALIZE   CHARACTER		NORMALIZE   CHARACTER		NORMALIZE   CHARACTER
+
+
+
+#GET_OP_CODE	GET_OP_CODE	GET_OP_CODE	GET_OP_CODE	GET_OP_CODE	GET_OP_CODE	GET_OP_CODE	GET_OP_CODE
+#GET_OP_CODE	GET_OP_CODE	GET_OP_CODE	GET_OP_CODE	GET_OP_CODE	GET_OP_CODE	GET_OP_CODE	GET_OP_CODE
+#GET_OP_CODE	GET_OP_CODE	GET_OP_CODE	GET_OP_CODE	GET_OP_CODE	GET_OP_CODE	GET_OP_CODE	GET_OP_CODE
+
+#a0:	command code
+#a1:	location of instruction in memory
+#v0:	opcode in correct location, func code in correct place,	-1 if no match
+#v1:	type of instruction
+#	0:	R	Register standard	instrxn  reg  reg  reg
+#	1:	I	Immediate standard	instrxn  reg  reg  imm
+#	2:	J	Jump standard		instrxn  label
+#	3:	P	Parenthesis		instrxn  reg  imm  (reg)
+#	4:	B	Branch			instrxn  reg  reg  label
+#	5:	S	Shift			instrxn  reg  reg  imm
+#	6:	jr	jr			instrxn  reg
+
+getOpCode:
+add $s0, $ra, $zero	#store return address
+add $t0, $a0, $zero	#store command code
+add $v0, $zero, $zero	#purify the return value just in case, likely a redundancy
+#start the branch table here
+beq $t0, 297, getOpCode_add
+beq $t0, 402, getOpCode_addi
+beq $t0, 519, getOpCode_addiu
+beq $t0, 414, getOpCode_addu
+beq $t0, 307, getOpCode_and
+beq $t0, 412, getOpCode_andi
+beq $t0, 312, getOpCode_beq
+beq $t0, 309, getOpCode_bne
+beq $t0, 106, getOpCode_j
+beq $t0, 311, getOpCode_jal
+beq $t0, 220, getOpCode_jr
+beq $t0, 323, getOpCode_lbu
+beq $t0, 329, getOpCode_lhu
+beq $t0, 216, getOpCode_ll
+beq $t0, 330, getOpCode_triBranch
+beq $t0, 227, getOpCode_lw
+beq $t0, 335, getOpCode_nor
+beq $t0, 225, getOpCode_or
+beq $t0, 339, getOpCode_slt
+beq $t0, 444, getOpCode_slti
+beq $t0, 561, getOpCode_sltiu
+beq $t0, 456, getOpCode_sltu
+beq $t0, 331, getOpCode_sll
+beq $t0, 337, getOpCode_srl
+beq $t0, 213, getOpCode_sb
+beq $t0, 214, getOpCode_sc
+beq $t0, 219, getOpCode_sh
+beq $t0, 234, getOpCode_sw
+beq $t0, 447, getOpCode_subu
+j getOpCode_errorExit		#none of the command codes matched a command
+
+getOpCode_triBranch:
+lbu $a0, ($a1)	#get first char
+jal normLetter	#normalize in case it's uppercase
+beq $v0, 108, getOpCode_lui	#108 = l in ascii
+beq $v0, 111, getOpCode_ori	#111 = o in ascii
+beq $v0, 115, getOpCode_sub	#115 = s in ascii
+j getOpCode_errorExit		#none of the command codes matched a command
+
+
+getOpCode_add:
+addi $v0, $zero, 0x00	#opcode
+sll $v0, $v0, 26	#shift opcode to it's left destination
+ori $v0, $v0, 0x20	#or opcode with functcode
+addi $v1, $zero, 0	#instruction format (reference at top)
+jr $s0
+
+getOpCode_addi:
+addi $v0, $zero, 0x8	#opcode
+sll $v0, $v0, 26	#shift opcode to it's left destination
+addi $v1, $zero, 1	#instruction format (reference at top)
+jr $s0
+
+getOpCode_addiu:
+addi $v0, $zero, 0x9	#opcode
+sll $v0, $v0, 26	#shift opcode to it's left destination
+addi $v1, $zero, 1	#instruction format (reference at top)
+jr $s0
+
+getOpCode_addu:
+addi $v0, $zero, 0x00	#opcode
+sll $v0, $v0, 26	#shift opcode to it's left destination
+ori $v0, $v0, 0x21	#or opcode with functcode
+addi $v1, $zero, 0	#instruction format (reference at top)
+jr $s0
+
+getOpCode_and:
+addi $v0, $zero, 0x00	#opcode
+sll $v0, $v0, 26	#shift opcode to it's left destination
+ori $v0, $v0, 0x24	#or opcode with functcode
+addi $v1, $zero, 0	#instruction format (reference at top)
+jr $s0
+
+getOpCode_andi:
+addi $v0, $zero, 0xc	#opcode
+sll $v0, $v0, 26	#shift opcode to it's left destination
+addi $v1, $zero, 1	#instruction format (reference at top)
+jr $s0
+
+getOpCode_beq:
+addi $v0, $zero, 0x4	#opcode
+sll $v0, $v0, 26	#shift opcode to it's left destination
+addi $v1, $zero, 4	#instruction format (reference at top)
+jr $s0
+
+getOpCode_bne:
+addi $v0, $zero, 0x5	#opcode
+sll $v0, $v0, 26	#shift opcode to it's left destination
+addi $v1, $zero, 4	#instruction format (reference at top)
+jr $s0
+
+getOpCode_j:
+addi $v0, $zero, 0x2	#opcode
+sll $v0, $v0, 26	#shift opcode to it's left destination
+addi $v1, $zero, 2	#instruction format (reference at top)
+jr $s0
+
+getOpCode_jal:
+addi $v0, $zero, 0x3	#opcode
+sll $v0, $v0, 26	#shift opcode to it's left destination
+addi $v1, $zero, 2	#instruction format (reference at top)
+jr $s0
+
+getOpCode_jr:
+addi $v0, $zero, 0x00	#opcode
+sll $v0, $v0, 26	#shift opcode to it's left destination
+ori $v0, $v0, 0x08	#or opcode with functcode
+addi $v1, $zero, 6	#instruction format (reference at top)
+jr $s0
+
+getOpCode_lbu:
+addi $v0, $zero, 0x24	#opcode
+sll $v0, $v0, 26	#shift opcode to it's left destination
+addi $v1, $zero, 3	#instruction format (reference at top)
+jr $s0
+
+getOpCode_lhu:
+addi $v0, $zero, 0x25	#opcode
+sll $v0, $v0, 26	#shift opcode to it's left destination
+addi $v1, $zero, 3	#instruction format (reference at top)
+jr $s0
+
+getOpCode_ll:
+addi $v0, $zero, 0x30	#opcode
+sll $v0, $v0, 26	#shift opcode to it's left destination
+addi $v1, $zero, 3	#instruction format (reference at top)
+jr $s0
+
+getOpCode_lui:
+addi $v0, $zero, 0xf	#opcode
+sll $v0, $v0, 26	#shift opcode to it's left destination
+addi $v1, $zero, 3	#instruction format (reference at top)
+jr $s0
+
+getOpCode_lw:
+addi $v0, $zero, 0x23	#opcode
+sll $v0, $v0, 26	#shift opcode to it's left destination
+addi $v1, $zero, 3	#instruction format (reference at top)
+jr $s0
+
+getOpCode_nor:
+addi $v0, $zero, 0x00	#opcode
+sll $v0, $v0, 26	#shift opcode to it's left destination
+ori $v0, $v0, 0x27	#or opcode with functcode
+addi $v1, $zero, 0	#instruction format (reference at top)
+jr $s0
+
+getOpCode_or:
+addi $v0, $zero, 0x00	#opcode
+sll $v0, $v0, 26	#shift opcode to it's left destination
+ori $v0, $v0, 0x25	#or opcode with functcode
+addi $v1, $zero, 0	#instruction format (reference at top)
+jr $s0
+
+getOpCode_ori:
+addi $v0, $zero, 0xd	#opcode
+sll $v0, $v0, 26	#shift opcode to it's left destination
+addi $v1, $zero, 1	#instruction format (reference at top)
+jr $s0
+
+getOpCode_slt:
+addi $v0, $zero, 0x00	#opcode
+sll $v0, $v0, 26	#shift opcode to it's left destination
+ori $v0, $v0, 0x2a	#or opcode with functcode
+addi $v1, $zero, 0	#instruction format (reference at top)
+jr $s0
+
+getOpCode_slti:
+addi $v0, $zero, 0xa	#opcode
+sll $v0, $v0, 26	#shift opcode to it's left destination
+addi $v1, $zero, 1	#instruction format (reference at top)
+jr $s0
+
+getOpCode_sltiu:
+addi $v0, $zero, 0xb	#opcode
+sll $v0, $v0, 26	#shift opcode to it's left destination
+addi $v1, $zero, 1	#instruction format (reference at top)
+jr $s0
+
+getOpCode_sltu:
+addi $v0, $zero, 0x00	#opcode
+sll $v0, $v0, 26	#shift opcode to it's left destination
+ori $v0, $v0, 0x2b	#or opcode with functcode
+addi $v1, $zero, 0	#instruction format (reference at top)
+jr $s0
+
+getOpCode_sll:
+addi $v0, $zero, 0x00	#opcode
+sll $v0, $v0, 26	#shift opcode to it's left destination
+ori $v0, $v0, 0x00	#or opcode with functcode
+addi $v1, $zero, 5	#instruction format (reference at top)
+jr $s0
+
+getOpCode_srl:
+addi $v0, $zero, 0x00	#opcode
+sll $v0, $v0, 26	#shift opcode to it's left destination
+ori $v0, $v0, 0x02	#or opcode with functcode
+addi $v1, $zero, 5	#instruction format (reference at top)
+jr $s0
+
+getOpCode_sb:
+addi $v0, $zero, 0x28	#opcode
+sll $v0, $v0, 26	#shift opcode to it's left destination
+addi $v1, $zero, 3	#instruction format (reference at top)
+jr $s0
+
+getOpCode_sc:
+addi $v0, $zero, 0x38	#opcode
+sll $v0, $v0, 26	#shift opcode to it's left destination
+addi $v1, $zero, 3	#instruction format (reference at top)
+jr $s0
+
+getOpCode_sh:
+addi $v0, $zero, 0x29	#opcode
+sll $v0, $v0, 26	#shift opcode to it's left destination
+addi $v1, $zero, 3	#instruction format (reference at top)
+jr $s0
+
+getOpCode_sw:
+addi $v0, $zero, 0x2b	#opcode
+sll $v0, $v0, 26	#shift opcode to it's left destination
+addi $v1, $zero, 3	#instruction format (reference at top)
+jr $s0
+
+getOpCode_sub:
+addi $v0, $zero, 0x00	#opcode
+sll $v0, $v0, 26	#shift opcode to it's left destination
+ori $v0, $v0, 0x22	#or opcode with functcode
+addi $v1, $zero, 0	#instruction format (reference at top)
+jr $s0
+
+getOpCode_subu:
+addi $v0, $zero, 0x00	#opcode
+sll $v0, $v0, 26	#shift opcode to it's left destination
+ori $v0, $v0, 0x23	#or opcode with functcode
+addi $v1, $zero, 0	#instruction format (reference at top)
+jr $s0
+
+getOpCode_errorExit:
+addi $v0, $zero, -1
+jr $s0
+
+#GET_OP_CODE	GET_OP_CODE	GET_OP_CODE	GET_OP_CODE	GET_OP_CODE	GET_OP_CODE	GET_OP_CODE	GET_OP_CODE
+#GET_OP_CODE	GET_OP_CODE	GET_OP_CODE	GET_OP_CODE	GET_OP_CODE	GET_OP_CODE	GET_OP_CODE	GET_OP_CODE
+#GET_OP_CODE	GET_OP_CODE	GET_OP_CODE	GET_OP_CODE	GET_OP_CODE	GET_OP_CODE	GET_OP_CODE	GET_OP_CODE
+
+
+#DETERMINE	DIRECTIVE	DETERMINE	DIRECTIVE	DETERMINE	DIRECTIVE	DETERMINE	DIRECTIVE
+#DETERMINE	DIRECTIVE	DETERMINE	DIRECTIVE	DETERMINE	DIRECTIVE	DETERMINE	DIRECTIVE
+#DETERMINE	DIRECTIVE	DETERMINE	DIRECTIVE	DETERMINE	DIRECTIVE	DETERMINE	DIRECTIVE
+
+#a0:	address of input string
+#v0:	type of directive, -1 if none found
+#0:	.text
+#1:	.data
+#2:	.word
+#3:	.asciiz
+#4:	.ascii
+#5:	.space
+detDirective:
+add $s0, $ra, $zero	#store the return address
+add $s1, $a0, $zero	#store the address of the input string
+
+#find the '.'
+add $t0, $zero, $zero
+detDirective_dotLoop:
+add $t1, $s1, $t0
+lbu $t2, 0($t1)		#load the character from t0'th pos into t2
+beq $t2, 46, detDirective_dotFound	#found '.'
+beq $t2, 0, detDirective_noDirFound	#reached null before '.'
+addi $t0, $t0, 1	#increment t0 (look to next position
+j detDirective_dotLoop
+
+detDirective_dotFound:
+#	     0     1       2      3       4        5
+#look for .text, .data, .word, .ascii, .asciiz, .space
+lbu $t2, 1($t1)		#get the character right after '.'
+beq $t2, 100, detDirective_d	#100 = d in ascii
+beq $t2, 116, detDirective_t	#116 = t in ascii
+beq $t2, 119, detDirective_w	#119 = w in ascii
+beq $t2,  97, detDirective_a	# 97 = a in ascii
+beq $t2, 115, detDirective_s	#115 = s in ascii
+j detDirective_noDirFound
+
+#use s2 for the temporary return code
+#t1 is the location of the .
+detDirective_d:
+addi $s2, $zero, 1
+lbu $a0, 5($t1)		#should be a whitespace
+jal isWhitespace
+bne $v0, 1, detDirective_noDirFound	#wasn't a whitespace
+j detDirective_nullStore
+
+detDirective_t:
+addi $s2, $zero, 0
+lbu $a0, 5($t1)
+jal isWhitespace
+bne $v0, 1, detDirective_noDirFound	#wasn't a whitespace
+j detDirective_nullStore
+
+detDirective_w:
+addi $s2, $zero, 2
+lbu $a0, 5($t1)
+jal isWhitespace
+bne $v0, 1, detDirective_noDirFound	#wasn't a whitespace
+j detDirective_word
+
+detDirective_a:
+addi $s2, $zero, 4	#code for ascii
+lbu $a0, 6($t1)
+jal isWhitespace
+beq $v0, 1, detDirective_ascii		#was a whitespace
+bne $a0, 122, detDirective_noDirFound	#was neither whitespace nor 'z'
+lbu $a0, 7($t1)				#if whitespace then asciiz
+jal isWhitespace
+bne $v0, 1, detDirective_noDirFound
+j detDirective_asciiz
+
+detDirective_s:
+addi $s2, $zero, 5
+lbu $a0, 6($t1)
+jal isWhitespace
+bne $v0, 1, detDirective_noDirFound
+j detDirective_space
+
+detDirective_space:
+addi $t1, $t1, 1
+detDirective_word:
+addi $t1, $t1, 5	#start t1 at the space after the directive
+detDirective_findDataLoop:
+lbu $a0, 0($t1)
+jal isWhitespace
+beq $a0, $zero, detDirective_nullStore	#null found before any storage info
+beq $v0, $zero,	detDirective_copy	#non white space found
+addi $t1, $t1, 1	#look to the next char
+j detDirective_findDataLoop
+
+detDirective_copy:	#copy the data to be stored into the stored string
+add $t0, $zero, $zero
+beq $s2, 5, detDirective_copy_singleItem	#space directive requires just one value
+detDirective_copy_loop:
+lbu $t2, 0($t1)		#get the character
+sb $t2, stored($t0)	#store it
+beq $t2, $zero, detDirective_copy_trim	#null character found and copied
+addi $t1, $t1, 1
+addi $t0, $t0, 1
+j detDirective_copy_loop
+
+detDirective_copy_trim:
+addi $t0, $t0, -1	#location of first non-null character/general decrement
+lbu $a0, stored($t0)
+jal isWhitespace
+beq $v0, $zero, detDirective_success	#got to non-whitespace char
+sb $zero, stored($t0)	#replace whitespace with null
+j detDirective_copy_trim
+
+detDirective_copy_singleItem:
+lbu $a0, 0($t1)
+jal isWhitespace
+beq $v0, 1, detDirective_copy_singleItem_done
+sb $a0, stored($t0)
+addi $t1, $t1, 1
+addi $t0, $t0, 1
+j detDirective_copy_singleItem
+detDirective_copy_singleItem_done:
+sb $zero, stored($t0)
+j detDirective_success
+
+detDirective_asciiz:
+addi $t1, $t1, 1
+addi $s2, $zero, 3	#code for asciiz
+detDirective_ascii:
+addi $t1, $t1, 6	#points to the space right after the directive
+detDirective_ascii_findQuote:
+lbu $a0, 0($t1)
+addi $t1, $t1, 1
+beq $a0, 34, detDirective_ascii_copy	#t1 points to first char after "
+j detDirective_ascii_findQuote
+
+detDirective_ascii_copy:
+add $t0, $zero, $zero
+detDirective_ascii_copy_loop:
+lbu $a0, 0($t1)
+beq $a0, 34, detDirective_ascii_copy_done	#found closing "
+sb $a0, stored($t0)
+addi $t1, $t1, 1
+addi $t0, $t0, 1
+j detDirective_ascii_copy_loop
+
+detDirective_ascii_copy_done:
+sb $zero, stored($t0)
+j detDirective_success
+
+
+detDirective_nullStore:
+sb $zero, stored($zero)	#make sure to null terminate the string immediately (no data to be stored found)
+detDirective_success:
+add $v0, $s2, $zero
+jr $s0
+
+detDirective_noDirFound:
+addi $v0, $zero, -1	#no directive found
+jr $s0
+
+#DETERMINE	DIRECTIVE	DETERMINE	DIRECTIVE	DETERMINE	DIRECTIVE	DETERMINE	DIRECTIVE
+#DETERMINE	DIRECTIVE	DETERMINE	DIRECTIVE	DETERMINE	DIRECTIVE	DETERMINE	DIRECTIVE
+#DETERMINE	DIRECTIVE	DETERMINE	DIRECTIVE	DETERMINE	DIRECTIVE	DETERMINE	DIRECTIVE
+
+
+
+#()()() FIND  LABEL ()()() FIND  LABEL ()()() FIND  LABEL ()()() FIND  LABEL ()()() FIND  LABEL ()()() FIND  LABEL ()()()
+#()()() FIND  LABEL ()()() FIND  LABEL ()()() FIND  LABEL ()()() FIND  LABEL ()()() FIND  LABEL ()()() FIND  LABEL ()()()
+#()()() FIND  LABEL ()()() FIND  LABEL ()()() FIND  LABEL ()()() FIND  LABEL ()()() FIND  LABEL ()()() FIND  LABEL ()()()
+
+#go to null
+#trace backwards
+#if found ')', find '('
+#find first instance of nonspace character, store it
+#find next nonspace character, if it is an letter then label is found
+#otherwise, not a label
+
+#WARNING	Bad things will happen and assembler will terminate if the opening parenthesis is missing before the closing one
+
+
+#a0:	address of instruction to look at
+#v0:	location (in memory) of last char of label in the instruction string
+pFindLabel:
+add $s0, $ra, $zero	#save return register
+add $s1, $a0, $zero	#save the instruction address
+add $s2, $s1, $zero	#tracer through the instruction
+pFindLabel_gotoNull:
+lbu $t0, ($s2)		#load a character
+beq $t0, $zero, pFindLabel_hayParenth	#once we hit null, jump to another loop
+addi $s2, $s2, 1	#increment the position of the character we're looking at
+j pFindLabel_gotoNull
+pFindLabel_hayParenth:
+addi $s2, $s2, -1	#now point to char right before null
+lbu $t0, ($s2)		#last char of instrx
+beq $t0, 41, pFindLabel_closeParenth	#41 = ')' in ascii
+add $s3, $s2, $zero	#store the location of the last character in the potential label in s3
+
+pFindLabel_findWhite:
+lbu $a0, ($s2)		#load the char from s2
+jal isWhitespace
+beq $v0, 1, pFindLabel_checkFirstChar	#found whitespace after label
+addi $s2, $s2, -1
+j pFindLabel_findWhite
+
+pFindLabel_closeParenth:
+lbu $t0, ($s2)		#load char from s2
+beq $t0, 40, pFindLabel_findLastChar	#40 = '(' in ascii
+					#need to find the last char because there can be whitespace between label and (
+					#mips accepts "sw $t0, label,,  ,,	,($zero)" as a valid instruction
+addi $s2, $s2, -1	#decrement s2
+j pFindLabel_closeParenth
+
+pFindLabel_findLastChar:
+addi $s2, $s2, -1	#point to char before the the '('
+lbu $a0, ($s2)		#load a char into a0
+jal isWhitespace	#check if it is a whitespace
+beq $v0, 1, pFindLabel_findLastChar	#if whitespace repeat
+add $s3, $s2, $zero	#store location of last char in the potential label in s3
+j pFindLabel_findWhite	#find the whitespace before the label
+
+#use this to check the first char of the label
+#if not a letter return -1, otherwise the contents of s3
+#at this point s2 is pointing at the whitespace before the potential label
+pFindLabel_checkFirstChar:
+lbu $a0, 1($s2)
+jal isLetter
+beq $v0, $zero, pFindLabel_noLabel
+add $v0, $s3, $zero	#s3 is the location in memory of last char of the label
+jr $s0
+
+pFindLabel_noLabel:
+addi $v0, $zero, -1
+jr $s0
+
+#()()() FIND  LABEL ()()() FIND  LABEL ()()() FIND  LABEL ()()() FIND  LABEL ()()() FIND  LABEL ()()() FIND  LABEL ()()()
+#()()() FIND  LABEL ()()() FIND  LABEL ()()() FIND  LABEL ()()() FIND  LABEL ()()() FIND  LABEL ()()() FIND  LABEL ()()()
+#()()() FIND  LABEL ()()() FIND  LABEL ()()() FIND  LABEL ()()() FIND  LABEL ()()() FIND  LABEL ()()() FIND  LABEL ()()()
+
+
+#IS	LETTER	?	IS	LETTER	?	IS	LETTER	?	IS	LETTER	?	IS	LETTER	?
+#IS	LETTER	?	IS	LETTER	?	IS	LETTER	?	IS	LETTER	?	IS	LETTER	?
+#IS	LETTER	?	IS	LETTER	?	IS	LETTER	?	IS	LETTER	?	IS	LETTER	?
+
+#a0:	character to check
+#v0:	1 if letter,	0 otherwise
+isLetter:
+add $v0, $zero, $zero
+li $t0, 65	#65 = 'A' in ascii
+slt $t1, $a0, $t0	#t1 = 1 if character code < 65
+beq $t1, 1, isLetter_exit
+li $t0, 122	#122 = 'z' in ascii
+sgt $t1, $a0, $t0	#t1 = 1 if character code > 122
+beq $t1, 1, isLetter_exit
+li $t0, 97	#97 = 'a' in ascii
+sgt $t8, $a0, 90	#t8 = 1 if character code > 90		90 = 'Z' in ascii
+slt $t9, $a0, $t0	#t9 = 1 if character code < 97		96 = 'a' in ascii
+			#t8 = t9 = 1 iff char isn't a letter
+sub $t0, $t8, $t9
+beq $t0, $zero, isLetter_exit	#only taken if not  a letter
+addi $v0, $zero, 1
+
+isLetter_exit:
+jr $ra
+
+#IS	LETTER	?	IS	LETTER	?	IS	LETTER	?	IS	LETTER	?	IS	LETTER	?
+#IS	LETTER	?	IS	LETTER	?	IS	LETTER	?	IS	LETTER	?	IS	LETTER	?
+#IS	LETTER	?	IS	LETTER	?	IS	LETTER	?	IS	LETTER	?	IS	LETTER	?
+
+
+
+#READ	LINE	READ	LINE	READ	LINE	READ	LINE	READ	LINE	READ	LINE	READ	LINE
+#READ	LINE	READ	LINE	READ	LINE	READ	LINE	READ	LINE	READ	LINE	READ	LINE
+#READ	LINE	READ	LINE	READ	LINE	READ	LINE	READ	LINE	READ	LINE	READ	LINE
+
+#a0:	address of output string
+#a1:	file descriptor to read from
+#read data from file
+#v0 will return -1 if end of file reached
+	
+readLine:
+add $s3, $a0, $zero	#store the address of the output string
+add $s0, $ra, $zero	#store the address to return to
+add $t1, $zero, $zero	#t1 will be the location in the char array we are writing to
+add $s2, $a1, $zero	#s6 is the file descriptor we read from
+addi $t4, $zero, 13	#value of the carriage return character in $t4
+addi $t5, $zero, 257	#max value of $t1
+addi $t6, $zero, 35	#value of '#'
+
+#let's say the rL label contains a 258 character storage space
+readLine_loop:
+add $a0, $s2, $zero	#put file descriptor in a0 for READ
+jal READ
+lbu $t2, singleChar($zero)
+beq $t2, $t4, readLine_exit	#exit if encountering a carriage return
+beq $t2, $t6, readLine_clear	#or if encountering a '#' comment signifier
+beq $t1, $t5, readLine_exit	#or limit of rL is reached
+beq $v0, 0, readLine_null	#if encountered the null terminating character
+
+add $t7, $s3, $t1
+sb $t2, ($t7)		#store the character in the rL string
+addi $t1, $t1, 1	#increment string array tracer
+j readLine_loop
+
+readLine_clear:
+add $t7, $s3, $t1
+sb $zero, ($t7)	#STORE NULL CHAR FIRST
+add $a0, $s2, $zero	#put file descriptor in a0 for clear
+j clearToNextLine	#now clear the file buffer to next line
+bne $v0, $zero, readLine_exit	#v0 is zero if last read in clearToNextLine was null character
+
+readLine_null:
+subi $v0, $zero, 1	#put -1 in the return register
+
+readLine_exit:
+add $t7, $s3, $t1
+sb $zero, ($t7)		#end the string with null character
+addi $t7, $t7, 1	#increment string array tracer
+sb $zero, ($t7)
+jr $s0				#jump back to where called from
+
+
+#recieve file descriptor in a0
+clearToNextLine:
+clearToNextLine_loop:
+jal READ
+lbu $t2, singleChar($zero)
+beq $t2, 13, clearToNextLine_exit	#exit if reached endline
+beq $v0, 0, clearToNextLine_exit	#or end of file
+j clearToNextLine_loop
+clearToNextLine_exit:
+jr $s0	#go back to main when done
+
+#Recieve file descriptor in a0
+READ:
+	li $v0, 14
+	la $a1, singleChar		#all characters get loaded to the s6 buffer think large memory bank
+	li $a2, 1		#number of bytes read
+	syscall
+	jr $ra
+#READ	LINE	READ	LINE	READ	LINE	READ	LINE	READ	LINE	READ	LINE	READ	LINE
+#READ	LINE	READ	LINE	READ	LINE	READ	LINE	READ	LINE	READ	LINE	READ	LINE
+#READ	LINE	READ	LINE	READ	LINE	READ	LINE	READ	LINE	READ	LINE	READ	LINE
+
+
+
+#ASCII	OUTPUT	ASCII	OUTPUT	ASCII	OUTPUT	ASCII	OUTPUT	ASCII	OUTPUT	ASCII	OUTPUT	ASCII	OUTPUT
+#ASCII	OUTPUT	ASCII	OUTPUT	ASCII	OUTPUT	ASCII	OUTPUT	ASCII	OUTPUT	ASCII	OUTPUT	ASCII	OUTPUT
+#ASCII	OUTPUT	ASCII	OUTPUT	ASCII	OUTPUT	ASCII	OUTPUT	ASCII	OUTPUT	ASCII	OUTPUT	ASCII	OUTPUT
+
+#a0:	bin descriptor
+#a1:	txt descriptor
+#a2:	reverse	1-true	0-false		true for characters, false for words/instructions
+write:
+	add $s0, $a0, $zero		#bin descriptor in s0
+	add $s1, $a1, $zero		#txt descriptor in s1
+	beq $a2, 1, write_reverse	#go to the reverse case
+
+write_bin:
+	li  $v0, 15		#write
+	add $a0, $s0, $zero	#redundancy, but may avoid bugs later on
+	la  $a1, writeMe	#always write from here
+	li  $a2, 4		#always write 4 bytes
+	syscall
+	
+write_text:
+	lw $s4, writeMe		#load the contents of the write buffer
+	li $s3, 1		#position we're looking at
+	sll $s3, $s3, 31	#start from left, read to right
+	
+	#prepare for output
+	add $a0, $s1, $zero	#text file descriptor
+	la $a1, writeMe		#always write from the writeMe buffer
+	li $a2, 1		#always write 1 byte at a time
+write_text_loop:
+	li $v0, 15		#write exception command
+	beq $s3, $zero, write_text_done	#when the 1 falls off the right we are done
+	and $t0, $s4, $s3	#t0 = 0 iff s3 bit in write me is a 0
+	srl $s3, $s3, 1		#next look at the less significan bit
+	beq $t0, $zero, write_text_zero	#zero in the s3 position
+	j write_text_one		#one in the s3 position
+	
+write_text_zero:
+	li $t0, 48		#48 = 0 in ascii
+	sb $t0, writeMe		#store the 0 character in writeMe
+	syscall
+	j write_text_loop	#go back to the loop
+write_text_one:
+	li $t0, 49		#49 = 0 in ascii
+	sb $t0, writeMe		#store the 0 character in writeMe
+	syscall
+	j write_text_loop	#go back to the loop	
+	
+write_text_done:
+	li $t0, 13		#13 = carriage return in ascii
+	sb $t0, writeMe		#store the carriage return character in writeMe
+	syscall			#print the CR to the text file
+	li $t0, 10		#line feed? new line?
+	sb $t0, writeMe
+	li $v0, 15
+	syscall
+	jr $ra
+	
+write_reverse:
+	li $t2, 0
+	li $t3, 1
+	li $t4, 2
+	li $t5, 3
+	#reverse the order of the bytes in writeMe buffer
+	
+	lbu $t0, writeMe($t5)	#last char of write me
+	lbu $t1, writeMe($t2)	#first char of write me
+	sb  $t0, writeMe($t2)	#store last char in first place
+	sb  $t1, writeMe($t5)	#store first char in last place
+	lbu $t0, writeMe($t4)	#second to last char 
+	lbu $t1, writeMe($t3)	#second char
+	sb  $t0, writeMe($t3)	#write second to last char in second place
+	sb  $t1, writeMe($t4)	#write second char in second to last place
+	j write_bin		#go back to the normal execution of the  procedure
+#BINARY	OUTPUT	BINARY	OUTPUT	BINARY	OUTPUT	BINARY	OUTPUT	BINARY	OUTPUT	BINARY	OUTPUT	BINARY	OUTPUT	
+#BINARY	OUTPUT	BINARY	OUTPUT	BINARY	OUTPUT	BINARY	OUTPUT	BINARY	OUTPUT	BINARY	OUTPUT	BINARY	OUTPUT	
+#BINARY	OUTPUT	BINARY	OUTPUT	BINARY	OUTPUT	BINARY	OUTPUT	BINARY	OUTPUT	BINARY	OUTPUT	BINARY	OUTPUT	
+
+
+
+#STORE	DATA	STORE	DATA	STORE	DATA	STORE	DATA	STORE	DATA	STORE	DATA	STORE	DATA	STORE	DATA
+#STORE	DATA	STORE	DATA	STORE	DATA	STORE	DATA	STORE	DATA	STORE	DATA	STORE	DATA	STORE	DATA
+#STORE	DATA	STORE	DATA	STORE	DATA	STORE	DATA	STORE	DATA	STORE	DATA	STORE	DATA	STORE	DATA
+
+#storeData
+
+#a0:	directive type
+#a1:	bytes outputted thus far	barely used
+#a2:	bin file descriptor		-1 on refusal to output
+#a3:	txt file descriptor		-1 on refusal to output
+
+#v0:	return the updated amount of bytes outputted thus far
+storeData:
+add $s0, $ra, $zero	#store return address
+add $s1, $a1, $zero	#store the words outputted thus far
+add $s2, $a0, $zero	#store this for purposes of adding a null in the case of asciiz
+add $s5, $a2, $zero	#store bin file descriptor
+add $s6, $a3, $zero	#store txt file descriptor
+la $s3, stored		#address of directive string
+#directive type
+#2:	.word
+#3:	.asciiz
+#4:	.ascii
+#5:	.space
+beq $a0, 2, storeData_word
+beq $a0, 3, storeData_ascii
+beq $a0, 4, storeData_ascii
+beq $a0, 5, storeData_space
+storeData_terminate:
+li $v0, 10
+syscall
+
+storeData_word:		#using s3 to trace through memory
+storeData_word_loopToWord:
+lbu $a0, ($s3)		#get a character
+beq $a0, 0, storeData_done	#reached null terminating character
+jal isWhitespace
+beq $v0, 0, storeData_writeWord	#not a whitespace, so beginning of word
+addi $s3, $s3, 1	#increment char we're looking at
+j storeData_word_loopToWord
+
+storeData_writeWord:	#s3 is pointing to the first character of the word
+add $a0, $s3, $zero
+jal saveToStack
+jal textToBinVal
+jal loadFromStack
+beq $v1, -1, storeData_terminate	#can't parse the string into a value
+add $s7, $v0, $zero			#store the binary val of the word
+jal saveToStack
+jal flushBuffer		
+jal loadFromStack
+add $s1, $v0, $s1	#increment $s1 if buffer flushed
+add $a0, $s5, $zero	#bin descriptor
+add $a1, $s6, $zero	#text descriptor
+li  $a2, 0		#don't reverse
+sw  $s7, writeMe($zero)	#write the word to buffer
+addi $s1, $s1, 1	#increment s1 since we wrote a word
+jal saveToStack
+jal write
+jal loadFromStack
+
+storeData_writeWord_nextWhiteSpace:
+lbu $a0, ($s3)	#load character from directive string
+jal isWhitespace
+beq $v0, 1, storeData_word_loopToWord	#found whitespace, now find next word
+addi $s3, $s3, 1	#increment s3
+j storeData_writeWord_nextWhiteSpace
+
+
+storeData_ascii:	#s4, s7 free
+lw $s4, writeMeSize($zero)	#get byte offset of buffer
+add $s7, $zero, $zero		#character from stored we're looking at
+storeData_ascii_loop:
+beq $s4, 4, storeData_ascii_write
+lbu $t0, stored($s7)		#copy byte from stored
+beq $t0, 0, storeData_ascii_final	#go to final write if null reached, if asciiz write null into label+(s4)
+sb  $t0, writeMe($s4)		#into the write buffer
+addi $s4, $s4, 1		#increment tracers
+addi $s7, $s7, 1	
+j storeData_ascii_loop
+
+storeData_ascii_write:
+addi $s1, $s1, 1	#increment the amount of bytes outputted
+add $s4, $zero, $zero	#reset the byte offset
+add $a0, $s5, $zero	#bin descriptor
+add $a1, $s6, $zero	#text descriptor
+li  $a2, 1		#reverse
+jal saveToStack
+jal write
+jal loadFromStack
+beq $s7, -1, storeData_ascii_done
+j storeData_ascii_loop	#jump back to the store data loop	
+
+storeData_ascii_final:
+beq $s2, 4, storeData_ascii_done
+sb $zero, writeMe($s4)	#store null terminating character in
+addi $s4, $s4, 1
+addi $s7, $zero, -1	#if we jump to write then want to jump to done
+beq $s4, 4, storeData_ascii_write
+storeData_ascii_done:
+sw $s4, writeMeSize($zero)	#store the modified byte offset
+j storeData_done
+
+
+
+storeData_space:	#s4,7,2,3 free
+add $a0, $s3, $zero	#address of string w/ word defining amount of space to store
+jal saveToStack
+jal textToBinVal
+jal loadFromStack
+beq $v1, -1, storeData_terminate	#can't parse the string into a value
+slti $v1, $v0, 1	#set v1 to 1 if got 0 or negative number
+beq $v1,  1, storeData_terminate	#recieved negative amount of space to store
+add $s7, $v0, $zero	#amount of space to store
+add $s4, $zero, $zero	#amount of space stored so far
+lw $s2, writeMeSize($zero)	#byte offset
+storeData_space_loop:
+beq $s2, 4, storeData_space_write
+beq $s4, $s7, storeData_space_done	#after the store check so that we don't have to check after breaking this loop
+sb  $zero, writeMe($s2)
+addi $s2, $s2, 1
+addi $s4, $s4, 1
+j storeData_space_loop
+
+storeData_space_write:
+addi $s1, $s1, 1	#increment the amount of bytes outputted
+add $s2, $zero, $zero	#reset the byte offset
+add $a0, $s5, $zero	#bin descriptor
+add $a1, $s6, $zero	#text descriptor
+li  $a2, 1		#reverse
+jal saveToStack
+jal write
+jal loadFromStack
+j storeData_space_loop	#jump back to the store data loop	
+
+storeData_space_done:
+sw $s2, writeMeSize($zero)	#write the modified byte offset
+j storeData_done
+
+storeData_done:
+add $v0, $s1, $zero
+jr $s0
+
+#STORE	DATA	STORE	DATA	STORE	DATA	STORE	DATA	STORE	DATA	STORE	DATA	STORE	DATA	STORE	DATA
+#STORE	DATA	STORE	DATA	STORE	DATA	STORE	DATA	STORE	DATA	STORE	DATA	STORE	DATA	STORE	DATA
+#STORE	DATA	STORE	DATA	STORE	DATA	STORE	DATA	STORE	DATA	STORE	DATA	STORE	DATA	STORE	DATA
+
+
+
+#FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER
+#FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER
+#FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER
+
+#v0:	1 or 0
+#	1 if there was something to flush
+#	0 if no flush occured
+flushBuffer:
+lw $t0, writeMeSize($zero)	#load the byte offset
+beq $t0, $zero, flushBuffer_zero	#nothing to flush in the buffer
+flushBuffer_fillBuffer:
+sb $zero, writeMe($t0)		#put a 0 in the buffer
+addi $t0, $t0, 1
+beq $t0, 4, flushBuffer_flush	#buffer is full when t0 (index) is out of bounds
+j flushBuffer_fillBuffer
+
+flushBuffer_flush:
+sw $zero, writeMeSize($zero)	#reset the buffer offset
+#saved registers still the same from storeData
+add $a0, $s5, $zero		#bin file descriptor
+add $a1, $s6, $zero		#txt file descriptor
+li  $a2, 1			#reverse the output (it has to have been strings in order for byte offset to be non-zero)
+	addi $sp, $sp, -4
+	sw $ra, 0($sp)
+jal write
+	lw $ra, 0($sp)
+	addi $sp, $sp, 4
+addi $v0, $zero, 1		#return 1 since buffer was flushed
+jr $ra
+
+flushBuffer_zero:
+add $v0, $zero, $zero
+jr $ra
+
+#FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER
+#FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER
+#FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER	FLUSH	BUFFER

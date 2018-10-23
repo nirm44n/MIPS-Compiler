@@ -1,0 +1,19 @@
+#for i/parenth format
+
+#you will have a readline label with the string of the information that we have read through
+
+
+#sw $s0, label($t2)
+#for i you will have parameters in order : register, register, immediate
+#for parenthesis you have : register, immediate (possibly label), register
+
+#be able to find registers and pass them to the reg to code function,
+#use said code to combine it with the opcode in whatever register it's being stored
+
+#be able to locate the immediate value, put it in a separate string and pass it to one of the two
+#base to binary conversion procedures
+
+#IF it is a label, identify it as such and change control flow to give it to the yet unmade 
+#label resolution procedure
+
+

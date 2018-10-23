@@ -1,0 +1,16 @@
+first j at 0x00823000
+
+labelS: .asciiz "john jumped off a cliff\n"
+
+addi $a0, $zero, labelS
+
+ addi $t0, $t2, 2   #lasdfjlasjdflk jasdlk;fjladf
+ 
+ #lakjdsfl;kasjdflkjasdlkgjlkasdjgf
+						add $t0
+						
+			label:
+ 
+		lb $t2, 3($t1)
+		addi $t2, $t6, 123
+ 

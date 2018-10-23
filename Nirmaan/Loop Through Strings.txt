@@ -1,0 +1,44 @@
+#a0:	address of input string
+#a1:	address of output string
+#extract the label, right aligned (may be spaces on the left)
+#if no label return -1 in v0
+#DO NOT MAKE LOTS OF SPACES BEFORE LABELS WITHOUT A REAL LABEL; "		:"	THAT'S MEAN
+extractLabel:
+#store the return address
+add $s0, $ra, $zero
+add $t0, $zero, $zero	#trace through array
+add $s2, $a0, $zero	#address of string that we search for a label in
+add $s3, $a1, $zero	#address of output string
+extractLabel_findColonLoop:
+add $t2, $s2, $t0
+lbu $t1, ($t2)	#load the character in t0 position
+beq $t1, 58, extractLabel_colonFound
+beq $t1, 0,  extractLabel_nullLabel	#null reached before ':'
+addi $t0, $t0, 1	#increment the tracer
+j extractLabel_findColonLoop
+
+
+#puts it into the label string
+extractLabel_colonFound:
+#label is a null label if ':' is in position 0
+beq $t0, $zero, extractLabel_nullLabel
+#put null in location corresponding to ':'+1 in label string, this will allow us to guarantee
+addi $t1, $t0, 1
+add $t1, $t1, $s3
+sb $zero, ($t1)
+#a white space on the left side of the label, this will be useful later
+addi $t9, $zero, 32	#32 is ascii for ' '
+sb $t9, ($s3)
+#store the value of $t0 in $s1 and $v0, this is the location of the rightmost character of the label in the label string
+add $v0, $t0, $zero
+add $s1, $t0, $zero
+extractLabel_copyLoop:
+#decrement t0, to get the location of the last character of the label in the readLine string
+add $t0, $t0, -1
+beq $t0, -1, extractLabel_copied	#can't copy something that's out of bounds
+add $t2, $s2, $t0	#the character in t0 pos in string we're looking through
+lbu $t1, ($t2)
+add $t2, $s3, $s1
+sb $t1, ($t2)
+addi $s1, $s1, -1	#copy from right to left
+j extractLabel_copyLoop

@@ -1,0 +1,7 @@
+#Expects a character at a0
+#will return 0 in v0 if it is an undercase char
+
+#compare chacaracter to code of a, store result in v0 (use slt) a0 < a	if true char is out of bounds
+#if v0 != 0 go to exit
+#compare code of z to character, store result in v0 (use slt)	z < a0	if true char is out of bounds
+#exit

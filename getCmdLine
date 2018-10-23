@@ -1,0 +1,39 @@
+#get pointer to first non blank character in a0
+
+#call getCmdCode
+#move v0 to s0		#s0 now has cmd code
+#move v1 to s1		#s1 now has pointer to whitespace proceeding the instruction
+
+#move s0 to a0
+#move s1 to a1
+#call getOpCode
+
+#store v0 in s2		#start building the commandline using register s2
+#store v1 in s3		#s3 now determines which format to use to get the rest of the command line
+
+#R format
+#find next $
+#load first two bytes after $ into a0 and a1
+#call registerCode procedure
+#shift result left x amount
+#or result with s2
+#find next $
+#load first two bytes after $ into a0 and a1
+#call registerCode procedure
+#shift result left y amount
+#or result with s2
+#find next $
+#load first two bytes after $ into a0 and a1
+#call registerCode procedure
+#shift result left z amount
+#or result with s2
+#done
+
+#I format
+
+
+#J format
+
+
+#Parenthesis format
+#??

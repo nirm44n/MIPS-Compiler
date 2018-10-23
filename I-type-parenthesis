@@ -1,0 +1,367 @@
+.data
+	Code: .asciiz "lw $a0, -48($t2)"
+	newline: .asciiz "\n"
+.text
+#####      Test Cases             #####
+#	OP:   lw
+#	Reg:   all except s0-s7 (s's are not working)
+#	all POSITIVE immediate ...working on negatives now
+
+#####      KNOWN REGISTERS        ######
+#
+#	$s0	command code
+#	$s1	whitespace pointer
+#	$a0	used for op/reg parsing
+#	$a1	used for reg parsing
+#	$v1	R-I-J format decider	
+#	$s2	outputs binary string	
+#	$t1	holds sum of ascii character values
+#	$s6     used for immediate processing set to one before calling immediate values
+#		
+
+	la $s0, Code
+	j OP_finder
+	
+I_type:
+	I_reg_first:
+		lb $s1, 0($s0)
+		addi $s0, $s0, 1
+		beq $s1, 0x20, I_reg_first	#continously increment string until a space is reached
+		lb $a0, 0($s0)				#    a0 = alpha
+		add $s0, $s0, 1				#  points to an integer/alpha after this call
+		lb $a1, 0($s0)				#    a1 = int/aplha
+		jal regToCode
+	I_or_first:	
+		sll $v0, $v0, 16		# or's together the binary form of the register with the output binary string after shifting it 11 places 
+		or $s2, $s2, $v0
+		j I_reg_second
+	I_reg_second:
+		li $v0, 0
+		lb $s1, 0($s0)
+		addi $s0, $s0, 1
+		bne $s1, 0x28, I_reg_second	#continously increment string until a parenthesis is reached
+		addi $s0, $s0, 1
+		lb $a0, 0($s0)
+		addi $s0, $s0, 1
+		lb $a1, 0($s0)
+		jal regToCode
+	I_or_second:	
+		sll $v0, $v0, 21		# or's together the binary form of the register with the output binary string after shifting it 11 places 
+		or $s2, $s2, $v0
+		j Ip_immediate
+	Ip_immediate:
+		li $v0, 0
+		lb $s1, 0($s0)
+		addi $s0, $s0, -1
+		bne $s1, 0x28, Ip_immediate	#stops after s1 has found a parenthesis so that $s0 ends up pointing to the first digit of a number
+						#we will read this number backwars, put it in a register then or it with $s2
+		
+		
+		li $s6, 1			#s6 multiplies the digits by 10^x but it must start at 1 every time it is called
+		jal Dec_from_string
+	Ip_or_immediate:
+		or $s2, $s2, $v0
+		
+end:
+	move $a0, $s2
+	li $v0, 35
+	syscall
+	
+	li $v0, 10
+	syscall
+########################              immediate codes                 ################################
+	#to call this method you must have the pointer point at the rightmost digit of the number
+Dec_from_string:
+	lb $a0, 0($s0)			#here each integer needs to be converted from its ascii value to its numeric value
+	
+	beq $a0, 0x30, dec_string_0
+	beq $a0, 0x31, dec_string_1
+	beq $a0, 0x32, dec_string_2
+	beq $a0, 0x33, dec_string_3
+	beq $a0, 0x34, dec_string_4
+	beq $a0, 0x35, dec_string_5
+	beq $a0, 0x36, dec_string_6
+	beq $a0, 0x37, dec_string_7
+	beq $a0, 0x38, dec_string_8
+	beq $a0, 0x39, dec_string_9
+	beq $a0, 0x2d, is_negative
+	
+Decimal_sum:
+	mul $t8, $a0, $s6		#t1 simply holds the product of 10^x and the ith digit
+	add $v0, $v0, $t8		#v0 will contain the sum of 10^x * ith digit and will be put into the binary string when the procedure finishes
+	mul $s6, $s6, 10
+	addi $s0, $s0, -1
+	lb $a1, 0($s0)			#a1 points to the next character over so when we hit a space we know when to stop the procedure 
+	bne $a1, 0x20, Dec_from_string
+	j Ip_or_immediate
+
+is_negative:
+	mul $v0, $v0, -1		#if its negative we make the integer a negative
+	sll $v0, $v0, 16		#shift left then shift right so that we dont corrupt register and opcode data
+	srl $v0 $v0, 16			
+	j Ip_or_immediate
+
+dec_string_0:
+	li $a0, 0
+	j Decimal_sum
+dec_string_1:
+	li $a0, 1
+	j Decimal_sum
+dec_string_2:
+	li $a0, 2
+	j Decimal_sum
+dec_string_3:
+	li $a0, 3
+	j Decimal_sum
+dec_string_4:
+	li $a0, 4
+	j Decimal_sum
+dec_string_5:
+	li $a0, 5
+	j Decimal_sum
+dec_string_6:
+	li $a0, 6
+	j Decimal_sum
+dec_string_7:
+	li $a0, 7
+	j Decimal_sum
+dec_string_8:
+	li $a0, 8
+	j Decimal_sum
+dec_string_9:
+	li $a0, 9
+	j Decimal_sum
+
+########################              Operand Codes                   ################################
+
+OP_finder:
+	lb $a0, 0($s0)
+	addi $s0, $s0, 1
+	beq $t1, 227, OP_lw
+
+OP_alpha_table:
+	beq $a0, 0x6c, OP_alpha_l
+	beq $a0, 0x77, OP_alpha_w
+	
+OP_alpha_l:
+	addi $t1, $t1, 108
+	j OP_finder
+OP_alpha_w:
+	addi $t1, $t1, 119
+	j OP_finder
+
+OP_lw:					#  Here I create the OPcode for the binary string
+	ori $s2, $s2, 0x23
+	sll $s2, $s2, 26
+	addi $s0, $s0, -1
+	j I_type
+
+########################              Register Codes                  ################################
+
+
+regToCode:
+	#move $ra to $s0, jump back to $s0 at end, use ra for jumping w/in procedure
+	
+	add $s7, $ra, $zero
+
+	#Load character codes into temp registers for comparison
+	#char code loaded	#char
+	li $t0, 122		#z
+	li $t1, 97		#a
+	li $t2, 118		#v
+	li $t3, 116		#t
+	li $t4, 115		#s
+	li $t5, 107		#k
+	li $t6, 103		#g
+	li $t7, 102		#f
+	li $t8, 114		#r
+	
+	beq $a0, $t0, regToCode_firstZ	#first character is z
+	beq $a0, $t1, regToCode_firstA	#first character is a
+	beq $a0, $t2, regToCode_firstV	#first character is v
+	beq $a0, $t3, regToCode_firstT	#first character is t
+	beq $a0, $t4, regToCode_firstS	#first character is s
+	beq $a0, $t5, regToCode_firstK	#first character is k
+	beq $a0, $t6, regToCode_firstG	#first character is g
+	beq $a0, $t7, regToCode_firstF	#first character is f
+	beq $a0, $t8, regToCode_firstR	#first character is r
+	j regToCode_ERROR		#first character is invalid
+	
+regToCode_firstZ:	#Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z
+	#only possible register is $zero
+	li $v0, 0
+	j regToCode_exit
+	
+regToCode_firstA:	#A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+	beq $a1, $t3, regToCode_firstA_at	#second character is t
+	jal regToCode_loadNumCodes
+	beq $a1, $t0, regToCode_firstA_a0	#second char is 0
+	beq $a1, $t1, regToCode_firstA_a1	#second char is 1
+	beq $a1, $t2, regToCode_firstA_a2	#second char is 2
+	beq $a1, $t3, regToCode_firstA_a3	#second char is 3
+	j regToCode_ERROR			#second char is invalid
+	
+regToCode_firstA_at:
+	li $v0, 1
+	j regToCode_exit
+	
+regToCode_firstA_a0:
+	li $v0, 4
+	j regToCode_exit
+regToCode_firstA_a1:
+	li $v0, 5
+	j regToCode_exit
+regToCode_firstA_a2:
+	li $v0, 6
+	j regToCode_exit
+regToCode_firstA_a3:
+	li $v0, 7
+	j regToCode_exit
+	
+	
+	
+regToCode_firstV:	#V V V V V V V V V V V V V V V V V V V V V V V V V V V V V V V V V V V V V
+	jal regToCode_loadNumCodes
+	beq $a1, $t0, regToCode_firstV_v0	#second char 0
+	beq $a1, $t1, regToCode_firstV_v1	#second char 1
+	j regToCode_ERROR
+regToCode_firstV_v0:
+	li $v0, 2
+	j regToCode_exit
+regToCode_firstV_v1:
+	li $v0, 3
+	j regToCode_exit
+	
+	
+regToCode_firstT:	#T T T T T T T T T T T T T T T T T T T T T T T T T T T T T T T T T T T T T
+	jal regToCode_loadNumCodes
+	beq $a1, $t0, regToCode_firstT_t0	#second char 0
+	beq $a1, $t1, regToCode_firstT_t1	#second char 1
+	beq $a1, $t2, regToCode_firstT_t2	#second char 2
+	beq $a1, $t3, regToCode_firstT_t3	#second char 3
+	beq $a1, $t4, regToCode_firstT_t4	#second char 4
+	beq $a1, $t5, regToCode_firstT_t5	#second char 5
+	beq $a1, $t6, regToCode_firstT_t6	#second char 6
+	beq $a1, $t7, regToCode_firstT_t7	#second char 7
+	beq $a1, $t8, regToCode_firstT_t8	#second char 8
+	beq $a1, $t9, regToCode_firstT_t9	#second char 9
+	j regToCode_ERROR			#second char invalid
+	
+regToCode_firstT_t0:
+	li $v0, 8
+	j regToCode_exit
+regToCode_firstT_t1:
+	li $v0, 9
+	j regToCode_exit
+regToCode_firstT_t2:
+	li $v0, 10
+	j regToCode_exit
+regToCode_firstT_t3:
+	li $v0, 11
+	j regToCode_exit
+regToCode_firstT_t4:
+	li $v0, 12
+	j regToCode_exit
+regToCode_firstT_t5:
+	li $v0, 13
+	j regToCode_exit
+regToCode_firstT_t6:
+	li $v0, 14
+	j regToCode_exit
+regToCode_firstT_t7:
+	li $v0, 15
+	j regToCode_exit
+regToCode_firstT_t8:
+	li $v0, 24
+	j regToCode_exit
+regToCode_firstT_t9:
+	li $v0, 25
+	j regToCode_exit
+			
+regToCode_firstS:	#S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S
+	beq $a1, 112, regToCode_firstS_sp	#second char p	112 is the decimal code for 'p'
+	#jal regToCode_loadNumCodes:
+	beq $a1, $t0, regToCode_firstS_s0	#second char 0
+	beq $a1, $t1, regToCode_firstS_s1	#second char 1
+	beq $a1, $t2, regToCode_firstS_s2	#second char 2
+	beq $a1, $t3, regToCode_firstS_s3	#second char 3
+	beq $a1, $t4, regToCode_firstS_s4	#second char 4
+	beq $a1, $t5, regToCode_firstS_s5	#second char 5
+	beq $a1, $t6, regToCode_firstS_s6	#second char 6
+	beq $a1, $t7, regToCode_firstS_s7	#second char 7
+	j regToCode_ERROR
+	
+regToCode_firstS_sp:
+	li $v0, 29
+	j regToCode_exit
+regToCode_firstS_s0:
+	li $v0, 16
+	j regToCode_exit
+regToCode_firstS_s1:
+	li $v0, 17
+	j regToCode_exit
+regToCode_firstS_s2:
+	li $v0, 18
+	j regToCode_exit
+regToCode_firstS_s3:
+	li $v0, 19
+	j regToCode_exit
+regToCode_firstS_s4:
+	li $v0, 20
+	j regToCode_exit
+regToCode_firstS_s5:
+	li $v0, 21
+	j regToCode_exit
+regToCode_firstS_s6:
+	li $v0, 22
+	j regToCode_exit
+regToCode_firstS_s7:
+	li $v0, 23
+	j regToCode_exit
+	
+regToCode_firstK:	#K K K K K K K K K K K K K K K K K K K K K K K K K K K K K K K K K K K K K
+	jal regToCode_loadNumCodes
+	beq $a1, $t0, regToCode_firstK_k0	#second char 0
+	beq $a1, $t1, regToCode_firstK_k1	#second char 1
+	j regToCode_ERROR			#second char invalid
+
+regToCode_firstK_k0:
+	li $v0, 26
+	j regToCode_exit
+regToCode_firstK_k1:
+	li $v0, 27
+	j regToCode_exit
+	
+regToCode_firstG:	#G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G
+	li $v0, 28	#only $gp starts with g
+	j regToCode_exit
+	
+regToCode_firstF:	#F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F F
+	li $v0, 30	#only $fp starts with f
+	j regToCode_exit
+
+regToCode_firstR:	#R R R R R R R R R R R R R R R R R R R R R R R R R R R R R R R R R R R R R
+	li $v0, 31	#only $ra starts with r
+	j regToCode_exit
+	
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+regToCode_loadNumCodes:
+	#char code loaded	#char
+	li $t0, 48		#0
+	li $t1, 49		#1
+	li $t2, 50		#2
+	li $t3, 51		#3
+	li $t4, 52		#4
+	li $t5, 53		#5
+	li $t6, 54		#6
+	li $t7, 55		#7
+	li $t8, 56		#8
+	li $t9, 57		#9
+	#jump back
+	jr $ra
+
+regToCode_ERROR:
+	li $v0, 0xFFFFFFFF	#ERROR  ERROR  ERROR  ERROR  ERROR
+
+regToCode_exit:
+	jr $s7

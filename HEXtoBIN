@@ -1,0 +1,252 @@
+.data
+
+prompt: .asciiz "Enter an 8 digit Hexadecimal number starting with '0x': "
+line: .asciiz "\n"
+output: .asciiz "Answer in Binary: "
+newline: .asciiz "\n"
+buffer: .space 11
+space: .asciiz ""
+hex_zero: .asciiz "0000"
+hex_one: .asciiz "0001"
+hex_two: .asciiz "0010"
+hex_three: .asciiz "0011"
+hex_four: .asciiz "0100"
+hex_five: .asciiz "0101"
+hex_six: .asciiz "0110"
+hex_seven: .asciiz "0111"
+hex_eight: .asciiz "1000"
+hex_nine: .asciiz "1001"
+hex_a: .asciiz "1010"
+hex_b: .asciiz "1011"
+hex_c: .asciiz "1100"
+hex_d: .asciiz "1101"
+hex_e: .asciiz "1110"
+hex_f: .asciiz "1111"
+
+.text
+la $a0, prompt
+li $v0, 4
+syscall
+
+la $a0, buffer
+li $a1, 11
+li $v0, 8
+ move $s1, $a0   
+syscall
+
+
+li $s0, 0
+add $s1, $s1, 2
+
+
+la $a0, newline
+li $v0, 4
+syscall
+PARTITION:
+
+#la $a0, newline
+#li $v0, 4
+#syscall
+
+lb $t1, 0($s1)
+#move $a0, $t1
+#li $v0, 11
+#syscall
+
+jal HEXLOOKUP
+
+addi $s1, $s1, 1	#this is a comment
+addi $s0, $s0, 1
+beq $t1, 0x00, end
+beq $s0, 11, end
+j PARTITION
+
+end: 
+li $v0, 10
+syscall
+HEXLOOKUP:
+	beq $t1, 48, HEX_0
+	beq $t1, 49, HEX_1
+	beq $t1, 50, HEX_2
+	beq $t1, 51, HEX_3
+	beq $t1, 52, HEX_4
+	beq $t1, 53, HEX_5
+	beq $t1, 54, HEX_6
+	beq $t1, 55, HEX_7
+	beq $t1, 56, HEX_8
+	beq $t1, 57, HEX_9
+	beq $t1, 65, HEX_A
+	beq $t1, 66, HEX_B
+	beq $t1, 67, HEX_C
+	beq $t1, 68, HEX_D
+	beq $t1, 69, HEX_E
+	beq $t1, 70, HEX_F
+	beq $t1, 97, HEX_A
+	beq $t1, 98, HEX_B
+	beq $t1, 99, HEX_C
+	beq $t1, 100, HEX_D
+	beq $t1, 101, HEX_E
+	beq $t1, 102, HEX_F	
+	jr $ra
+HEX_0:
+	la $a0, space
+	li $v0, 4
+	syscall
+	
+	la $a0, hex_zero
+	li $v0, 4
+	syscall
+	
+	jr $ra
+HEX_1:
+	la $a0, space
+	li $v0, 4
+	syscall
+	
+	la $a0, hex_one
+	li $v0, 4
+	syscall
+	
+	jr $ra
+HEX_2:
+	la $a0, space
+	li $v0, 4
+	syscall
+	
+	la $a0, hex_two
+	li $v0, 4
+	syscall
+	
+	jr $ra
+HEX_3:
+	la $a0, space
+	li $v0, 4
+	syscall
+	
+	la $a0, hex_three
+	li $v0, 4
+	syscall
+	
+	jr $ra
+HEX_4:
+	la $a0, space
+	li $v0, 4
+	syscall
+	
+	la $a0, hex_four
+	li $v0, 4
+	syscall
+	
+	jr $ra
+HEX_5:
+	la $a0, space
+	li $v0, 4
+	syscall
+	
+	la $a0, hex_five
+	li $v0, 4
+	syscall
+	
+	jr $ra
+
+HEX_6:
+	la $a0, space
+	li $v0, 4
+	syscall
+	
+	la $a0, hex_six
+	li $v0, 4
+	syscall
+	
+	jr $ra
+HEX_7:
+	la $a0, space
+	li $v0, 4
+	syscall
+	
+	la $a0, hex_seven
+	li $v0, 4
+	syscall
+	
+	jr $ra
+HEX_8:
+	la $a0, space
+	li $v0, 4
+	syscall
+	
+	la $a0, hex_eight
+	li $v0, 4
+	syscall
+	
+	jr $ra
+HEX_9:
+	la $a0, space
+	li $v0, 4
+	syscall
+	
+	la $a0, hex_nine
+	li $v0, 4
+	syscall
+	
+	jr $ra
+HEX_A:
+	la $a0, space
+	li $v0, 4
+	syscall
+	
+	la $a0, hex_a
+	li $v0, 4
+	syscall
+	
+	jr $ra
+HEX_B:
+	la $a0, space
+	li $v0, 4
+	syscall
+	
+	la $a0, hex_b
+	li $v0, 4
+	syscall
+	
+	jr $ra
+HEX_C:
+	la $a0, space
+	li $v0, 4
+	syscall
+	
+	la $a0, hex_c
+	li $v0, 4
+	syscall
+	
+	jr $ra
+HEX_D:
+	la $a0, space
+	li $v0, 4
+	syscall
+	
+	la $a0, hex_d
+	li $v0, 4
+	syscall
+	
+	jr $ra
+HEX_E:
+	la $a0, space
+	li $v0, 4
+	syscall
+	
+	la $a0, hex_e
+	li $v0, 4
+	syscall
+	
+	jr $ra
+HEX_F:
+	la $a0, space
+	li $v0, 4
+	syscall
+	
+	la $a0, hex_f
+	li $v0, 4
+	syscall
+	
+	jr $ra
+

@@ -1,0 +1,16 @@
+.data
+
+Sound: .word 1
+.text
+
+  la $t8, Sound          
+  li $t2,40 
+              
+Play:
+  li $a0, 62 
+  li $a1, 5000 
+  move $a2, $t2
+  li $a3, 120
+  la $v0, 33
+  syscall               
+ 
